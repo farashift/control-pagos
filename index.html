@@ -4,9 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Control de Pagos</title>
+  <meta name="description" content="Control de gastos variables del negocio: servicios, proveedores, impuestos y préstamos.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%277%27 fill=%27%231f6feb%27/%3E%3Ctext x=%2716%27 y=%2722%27 font-size=%2716%27 font-family=%27Arial%27 font-weight=%27bold%27 fill=%27white%27 text-anchor=%27middle%27%3ES/%3C/text%3E%3C/svg%3E">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+  <noscript><p style="padding:16px">Activa JavaScript para usar el sistema.</p></noscript>
 
   <!-- HU-01: Pantalla de inicio de sesión -->
   <section id="vista-login" class="login">
@@ -14,7 +17,7 @@
       <h1>Control de Pagos</h1>
       <p class="sub">Gastos variables del negocio</p>
       <label>Usuario
-        <input id="login-usuario" autocomplete="username">
+        <input id="login-usuario" autocomplete="username" autocapitalize="none" spellcheck="false">
       </label>
       <label>Contraseña
         <input id="login-clave" type="password" autocomplete="current-password">
@@ -92,12 +95,12 @@
       <h3 id="pago-titulo">Registrar pago</h3>
 
       <label>¿A quién se paga? (beneficiario)
-        <input name="beneficiario" placeholder="Ej. Hidrandina, SUNAT, Distribuidora Norte">
+        <input name="beneficiario" maxlength="80" placeholder="Ej. Hidrandina, SUNAT, Distribuidora Norte">
       </label>
       <small class="campo-error" data-para="beneficiario"></small>
 
       <label>Concepto
-        <input name="concepto" placeholder="Ej. Luz de octubre">
+        <input name="concepto" maxlength="80" placeholder="Ej. Luz de octubre">
       </label>
       <small class="campo-error" data-para="concepto"></small>
 
@@ -116,7 +119,7 @@
         </div>
         <div>
           <label>Monto (S/)
-            <input name="monto" inputmode="decimal" placeholder="150.50">
+            <input name="monto" maxlength="15" inputmode="decimal" placeholder="150.50">
           </label>
           <small class="campo-error" data-para="monto"></small>
         </div>

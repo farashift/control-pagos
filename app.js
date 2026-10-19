@@ -113,6 +113,10 @@ function iniciarSesion(evento) {
     return;
   }
   sessionStorage.setItem(CLAVE_SESION, encontrado.usuario);
+  // Al entrar siempre se ven los pagos del mes actual, sin filtros
+  vista.anio = hoy.getFullYear();
+  vista.mes = hoy.getMonth();
+  vista.filtro = 'todos';
   $('#form-login').reset();
   $('#login-error').hidden = true;
   mostrarPantalla();
@@ -120,6 +124,7 @@ function iniciarSesion(evento) {
 
 function cerrarSesion() {
   sessionStorage.removeItem(CLAVE_SESION);
+  if (confirmar.pendiente) confirmar.pendiente(false);
   document.querySelectorAll('dialog[open]').forEach((d) => d.close());
   mostrarPantalla();
 }
@@ -166,6 +171,17 @@ function abrirFormularioPago(pago) {
   form.elements.beneficiario.focus();
 }
 
+// Acepta "150.50", "150,50" y "1,850.00" (coma de miles). Quita "S/" y espacios.
+function normalizarMonto(texto) {
+  let monto = texto.trim().replace(/^s\/\.?\s*/i, '').replace(/\s/g, '');
+  if (/^\d+,\d{1,2}$/.test(monto)) {
+    monto = monto.replace(',', '.');                 // 150,50 -> 150.50 (coma decimal)
+  } else if (/^\d{1,3}(,\d{3})+(\.\d{1,2})?$/.test(monto)) {
+    monto = monto.replace(/,/g, '');                 // 1,850.00 -> 1850.00 (coma de miles)
+  }
+  return monto;
+}
+
 // Revisa los datos del formulario. Devuelve los datos limpios y los errores encontrados.
 function validarPago(form) {
   const campos = form.elements;
@@ -173,7 +189,7 @@ function validarPago(form) {
     beneficiario: campos.beneficiario.value.trim(),
     concepto: campos.concepto.value.trim(),
     tipo: campos.tipo.value,
-    monto: campos.monto.value.trim().replace(',', '.'),
+    monto: normalizarMonto(campos.monto.value),
     vencimiento: campos.vencimiento.value,
   };
   const errores = {};
@@ -187,9 +203,14 @@ function validarPago(form) {
     errores.monto = 'Ingresa el monto.';
   } else if (!/^\d+(\.\d{1,2})?$/.test(datos.monto) || Number(datos.monto) <= 0) {
     errores.monto = 'El monto debe ser mayor que 0 y con máximo 2 decimales (ej. 150.50).';
+  } else if (Number(datos.monto) > 9999999.99) {
+    errores.monto = 'El monto es demasiado alto. Revisa que esté bien escrito.';
   }
 
   if (!datos.vencimiento) errores.vencimiento = 'Elige la fecha de vencimiento.';
+  else if (datos.vencimiento < '2000-01-01' || datos.vencimiento > '2099-12-31') {
+    errores.vencimiento = 'Revisa el año de la fecha de vencimiento.';
+  }
 
   datos.monto = Number(datos.monto);
   return { datos, errores };
@@ -345,12 +366,20 @@ async function confirmarVoucher(evento) {
   mostrarErrores(form, errores);
   if (Object.keys(errores).length) return;
 
+  // Mientras se procesa el archivo, el botón se desactiva para evitar doble clic
+  const botonConfirmar = $('#voucher-confirmar');
+  const textoBoton = botonConfirmar.textContent;
+  botonConfirmar.disabled = true;
+  botonConfirmar.textContent = 'Guardando…';
   let voucher;
   try {
     voucher = await leerVoucher(archivo);
   } catch (error) {
     mostrarErrores(form, { archivo: error.message });
     return;
+  } finally {
+    botonConfirmar.disabled = false;
+    botonConfirmar.textContent = textoBoton;
   }
 
   const pagos = leerPagos();
@@ -372,14 +401,14 @@ async function confirmarVoucher(evento) {
 // Las fotos se achican para que no llenen la memoria del navegador.
 async function leerVoucher(archivo) {
   if (archivo.type === 'application/pdf') {
-    if (archivo.size > 1.5 * 1024 * 1024) {
-      throw new Error('El PDF pesa más de 1.5 MB. Sube una foto del voucher o un PDF más liviano.');
+    if (archivo.size > 1024 * 1024) {
+      throw new Error('El PDF pesa más de 1 MB. Sube una foto o captura del voucher.');
     }
     return { nombre: archivo.name, tipo: archivo.type, datos: await leerComoDataURL(archivo) };
   }
 
   const imagen = await cargarImagen(await leerComoDataURL(archivo));
-  const escala = Math.min(1, 1400 / Math.max(imagen.width, imagen.height));
+  const escala = Math.min(1, 1100 / Math.max(imagen.width, imagen.height));
   const lienzo = document.createElement('canvas');
   lienzo.width = Math.round(imagen.width * escala);
   lienzo.height = Math.round(imagen.height * escala);
@@ -387,7 +416,7 @@ async function leerVoucher(archivo) {
   ctx.fillStyle = '#fff';
   ctx.fillRect(0, 0, lienzo.width, lienzo.height);
   ctx.drawImage(imagen, 0, 0, lienzo.width, lienzo.height);
-  return { nombre: archivo.name, tipo: 'image/jpeg', datos: lienzo.toDataURL('image/jpeg', 0.75) };
+  return { nombre: archivo.name, tipo: 'image/jpeg', datos: lienzo.toDataURL('image/jpeg', 0.7) };
 }
 
 function leerComoDataURL(archivo) {
@@ -445,10 +474,25 @@ function confirmar(titulo, mensaje, textoBoton) {
   $('#confirmar-titulo').textContent = titulo;
   $('#confirmar-mensaje').textContent = mensaje;
   $('#confirmar-si').textContent = textoBoton;
-  dialogo.returnValue = '';
+  const form = dialogo.querySelector('form');
+  if (confirmar.pendiente) confirmar.pendiente(false); // una confirmación anterior sin responder se cancela
   dialogo.showModal();
   return new Promise((resolver) => {
-    dialogo.addEventListener('close', () => resolver(dialogo.returnValue === 'si'), { once: true });
+    // Responde en el mismo clic (Sí / Cancelar); con la tecla Escape cuenta como Cancelar
+    // (si el diálogo se cierra de otra forma, por ejemplo al cerrar sesión, también cuenta como Cancelar)
+    const terminar = (respuesta) => {
+      form.removeEventListener('submit', alElegir);
+      dialogo.removeEventListener('cancel', alCancelar);
+      dialogo.removeEventListener('close', alCancelar);
+      confirmar.pendiente = null;
+      resolver(respuesta);
+    };
+    confirmar.pendiente = terminar;
+    const alElegir = (evento) => terminar(evento.submitter?.value === 'si');
+    const alCancelar = () => terminar(false);
+    form.addEventListener('submit', alElegir);
+    dialogo.addEventListener('cancel', alCancelar);
+    dialogo.addEventListener('close', alCancelar);
   });
 }
 
@@ -628,7 +672,8 @@ function crearDatosDemo() {
     const p = { id: nuevoId(), beneficiario, concepto, tipo, monto, vencimiento: fechaDemo(mes, dia), pagado: false };
     if (pagadoDia) {
       p.pagado = true;
-      p.fechaPago = fechaDemo(mes, pagadoDia);
+      const fechaPago = fechaDemo(mes, pagadoDia);
+      p.fechaPago = fechaPago > hoyISO() ? hoyISO() : fechaPago; // nunca en el futuro
       p.medio = medio;
       p.voucher = voucherDemo(p);
     }

@@ -23,6 +23,7 @@ El profe tiene las historias en la mano. Recorre cada una diciendo el criterio y
 ### HU-02 · Registrar un pago pendiente
 - Clic en **+ Registrar pago**. Todo está en una sola ventana.
 - Deja campos vacíos y pon un monto como `12.345` → **Guardar** → cada campo dice qué corregir y no se guarda.
+- Escribe el monto como `1,850` → se guarda como S/ 1,850.00 (acepta coma de miles y coma decimal).
 - Llénalo bien: `Claro` · `Celular de la empresa` · `Servicio` · `59.90` · una fecha de este mes → **Guardar**.
 - Aparece en la lista como **Pendiente** y el resumen sube.
 
@@ -118,5 +119,5 @@ Cada pago se ve así:
 - **¿Si el gerente lo abre en su celular ve lo mismo?** Todavía no: en el MVP los datos viven en el navegador donde se usa.
   Eso es justamente la Etapa 2 (base de datos en la nube).
 - **¿Por qué no está el botón de pagar?** Porque necesita conectarse al banco y usted mismo dijo que complicaba el MVP. Está en el backlog como HU-08.
-- **¿Qué pasa si suben un voucher muy pesado?** Las fotos se achican automáticamente antes de guardarse. Los PDF tienen un límite de 1.5 MB.
+- **¿Qué pasa si suben un voucher muy pesado?** Las fotos se achican automáticamente antes de guardarse. Los PDF tienen un límite de 1 MB.
 - **¿Cómo trabajaron con Scrum?** Un sprint de 1 semana, 7 historias priorizadas por el cliente; cada historia tiene su commit en GitHub.
