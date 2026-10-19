@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Control de Pagos</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- HU-01: Pantalla de inicio de sesión -->
+  <section id="vista-login" class="login">
+    <form id="form-login" class="tarjeta login-caja" novalidate>
+      <h1>Control de Pagos</h1>
+      <p class="sub">Gastos variables del negocio</p>
+      <label>Usuario
+        <input id="login-usuario" autocomplete="username">
+      </label>
+      <label>Contraseña
+        <input id="login-clave" type="password" autocomplete="current-password">
+      </label>
+      <p id="login-error" class="error" hidden>Usuario o contraseña incorrectos</p>
+      <button class="btn primario" type="submit">Ingresar</button>
+    </form>
+  </section>
+
+  <!-- Pantalla principal: solo se muestra con la sesión iniciada -->
+  <div id="vista-app" hidden>
+    <header class="barra">
+      <strong class="marca">Control de Pagos</strong>
+      <span class="usuario">Sesión: <b id="usuario-actual"></b></span>
+      <button id="btn-salir" class="btn">Cerrar sesión</button>
+    </header>
+
+    <main class="contenido">
+    </main>
+  </div>
+
+  <div id="aviso" class="aviso" hidden></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
