@@ -3,6 +3,8 @@
 Sistema web para que un negocio controle sus **gastos variables** (servicios, proveedores, impuestos SUNAT y préstamos) y deje de pagar moras.
 Proyecto del curso **Agile Development — UPAO**, trabajado con Scrum.
 
+**Sistema publicado:** https://santiag0507.github.io/prestamos/
+
 ## Usuarios de prueba
 
 | Rol | Usuario | Contraseña |
