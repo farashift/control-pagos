@@ -139,6 +139,7 @@ function mostrarPantalla() {
 // Vuelve a dibujar la pantalla principal con los datos actuales
 function render() {
   $('#mes-titulo').textContent = `${MESES[vista.mes]} ${vista.anio}`;
+  $('#mes-actual').hidden = vista.anio === hoy.getFullYear() && vista.mes === hoy.getMonth();
   $('#filtro-estado').value = vista.filtro;
   renderResumen();
   renderLista();
@@ -550,6 +551,22 @@ function clickEnResumen(evento) {
   render();
 }
 
+// ================== HU-07: CONSULTAR MESES ANTERIORES ==================
+
+// paso = -1 (mes anterior) o +1 (mes siguiente). La lista y el resumen se recalculan solos.
+function moverMes(paso) {
+  const fecha = new Date(vista.anio, vista.mes + paso, 1);
+  vista.anio = fecha.getFullYear();
+  vista.mes = fecha.getMonth();
+  render();
+}
+
+function irAlMesActual() {
+  vista.anio = hoy.getFullYear();
+  vista.mes = hoy.getMonth();
+  render();
+}
+
 // ================== ARRANQUE ==================
 
 $('#form-login').addEventListener('submit', iniciarSesion);
@@ -561,6 +578,9 @@ $('#tabla-pagos').addEventListener('click', clickEnTabla);
 $('#form-voucher').addEventListener('submit', confirmarVoucher);
 $('#dlg-ver').addEventListener('close', cerrarVoucher);
 $('#resumen-tarjetas').addEventListener('click', clickEnResumen);
+$('#mes-anterior').addEventListener('click', () => moverMes(-1));
+$('#mes-siguiente').addEventListener('click', () => moverMes(1));
+$('#mes-actual').addEventListener('click', irAlMesActual);
 
 // Si la asistente registra algo en otra pestaña, esta pantalla se actualiza sola
 // (la sesión se guarda por pestaña, así se puede tener al gerente y a la asistente abiertos a la vez)
