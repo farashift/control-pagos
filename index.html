@@ -119,6 +119,56 @@
     </form>
   </dialog>
 
+  <!-- HU-04: Marcar como pagado y adjuntar voucher -->
+  <dialog id="dlg-voucher">
+    <form id="form-voucher" novalidate>
+      <h3 id="voucher-titulo">Marcar como pagado</h3>
+      <p id="voucher-detalle" class="sub"></p>
+
+      <div id="campos-pago" class="fila-2">
+        <div>
+          <label>Fecha de pago
+            <input name="fechaPago" type="date">
+          </label>
+          <small class="campo-error" data-para="fechaPago"></small>
+        </div>
+        <div>
+          <label>Medio de pago
+            <select name="medio">
+              <option value="">Elige…</option>
+              <option>Agente</option>
+              <option>App del banco</option>
+              <option>Efectivo</option>
+              <option>Tarjeta</option>
+            </select>
+          </label>
+          <small class="campo-error" data-para="medio"></small>
+        </div>
+      </div>
+
+      <label>Voucher (foto o PDF)
+        <input name="archivo" type="file" accept="image/*,application/pdf">
+      </label>
+      <small class="campo-error" data-para="archivo"></small>
+
+      <div class="dialogo-botones">
+        <button type="button" class="btn" data-cerrar>Cancelar</button>
+        <button type="submit" class="btn primario" id="voucher-confirmar">Confirmar pago</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- HU-04: Ver el voucher adjunto -->
+  <dialog id="dlg-ver" class="dialogo-ancho">
+    <h3 id="ver-titulo">Voucher</h3>
+    <p id="ver-detalle" class="sub"></p>
+    <div id="ver-contenido" class="voucher-vista"></div>
+    <div class="dialogo-botones">
+      <a id="ver-descargar" class="btn" download>Descargar</a>
+      <button type="button" class="btn primario" data-cerrar>Cerrar</button>
+    </div>
+  </dialog>
+
   <div id="aviso" class="aviso" hidden></div>
 
   <script src="app.js"></script>

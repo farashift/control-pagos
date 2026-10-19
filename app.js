@@ -253,10 +253,172 @@ function filaPago(pago) {
     </tr>`;
 }
 
-// Botones de cada fila (se van agregando en las siguientes historias)
+// Botones de cada fila según el estado y el rol de quien mira
 function accionesDe(pago, estado) {
-  return '';
+  const esAsistente = usuarioActual().rol === 'asistente';
+  const botones = [];
+
+  if (estado === 'Pagado') {
+    botones.push(boton('ver', pago.id, 'Ver voucher'));
+  } else if (esAsistente) {
+    botones.push(boton('pagar', pago.id, 'Marcar como pagado', 'ok'));
+  }
+  return botones.join('');
 }
+
+function boton(accion, id, texto, estilo = '') {
+  return `<button class="btn chico ${estilo}" data-accion="${accion}" data-id="${id}">${texto}</button>`;
+}
+
+// Un solo "escuchador" para todos los botones de la tabla
+function clickEnTabla(evento) {
+  const boton = evento.target.closest('button[data-accion]');
+  if (!boton) return;
+  const { accion, id } = boton.dataset;
+  if (ACCIONES[accion]) ACCIONES[accion](id);
+}
+
+// ================== HU-04: MARCAR COMO PAGADO CON VOUCHER ==================
+
+// La misma ventana sirve para "marcar como pagado" y, en HU-06, para "reemplazar voucher"
+function abrirVentanaVoucher(id, modo) {
+  const pago = buscarPago(id);
+  const form = $('#form-voucher');
+  form.reset();
+  mostrarErrores(form, {});
+  form.dataset.id = id;
+  form.dataset.modo = modo;
+
+  const marcando = modo === 'pagar';
+  $('#voucher-titulo').textContent = marcando ? 'Marcar como pagado' : 'Reemplazar voucher';
+  $('#voucher-confirmar').textContent = marcando ? 'Confirmar pago' : 'Guardar nuevo voucher';
+  $('#campos-pago').hidden = !marcando;
+  $('#voucher-detalle').textContent = `${pago.beneficiario} · ${pago.concepto} · ${soles(pago.monto)}`;
+  form.elements.fechaPago.value = hoyISO();
+  form.elements.fechaPago.max = hoyISO();
+
+  $('#dlg-voucher').showModal();
+}
+
+async function confirmarVoucher(evento) {
+  evento.preventDefault();
+  const form = evento.target;
+  const campos = form.elements;
+  const marcando = form.dataset.modo === 'pagar';
+  const archivo = campos.archivo.files[0];
+  const errores = {};
+
+  if (marcando) {
+    if (!campos.fechaPago.value) errores.fechaPago = 'Indica la fecha de pago.';
+    else if (campos.fechaPago.value > hoyISO()) errores.fechaPago = 'La fecha de pago no puede ser futura.';
+    if (!campos.medio.value) errores.medio = 'Elige el medio de pago.';
+  }
+  // Sin voucher no se puede marcar como pagado
+  if (!archivo) errores.archivo = 'Adjunta el voucher (foto o PDF).';
+  else if (!archivo.type.startsWith('image/') && archivo.type !== 'application/pdf') {
+    errores.archivo = 'El voucher debe ser una imagen o un PDF.';
+  }
+
+  mostrarErrores(form, errores);
+  if (Object.keys(errores).length) return;
+
+  let voucher;
+  try {
+    voucher = await leerVoucher(archivo);
+  } catch (error) {
+    mostrarErrores(form, { archivo: error.message });
+    return;
+  }
+
+  const pagos = leerPagos();
+  const pago = pagos.find((p) => p.id === form.dataset.id);
+  if (marcando) {
+    pago.pagado = true;
+    pago.fechaPago = campos.fechaPago.value;
+    pago.medio = campos.medio.value;
+  }
+  pago.voucher = voucher;
+  if (!guardarPagos(pagos)) return;
+
+  $('#dlg-voucher').close();
+  render();
+  aviso(marcando ? 'Pago marcado como Pagado' : 'Voucher reemplazado');
+}
+
+// Convierte el archivo en texto (data URL) para poder guardarlo.
+// Las fotos se achican para que no llenen la memoria del navegador.
+async function leerVoucher(archivo) {
+  if (archivo.type === 'application/pdf') {
+    if (archivo.size > 1.5 * 1024 * 1024) {
+      throw new Error('El PDF pesa más de 1.5 MB. Sube una foto del voucher o un PDF más liviano.');
+    }
+    return { nombre: archivo.name, tipo: archivo.type, datos: await leerComoDataURL(archivo) };
+  }
+
+  const imagen = await cargarImagen(await leerComoDataURL(archivo));
+  const escala = Math.min(1, 1400 / Math.max(imagen.width, imagen.height));
+  const lienzo = document.createElement('canvas');
+  lienzo.width = Math.round(imagen.width * escala);
+  lienzo.height = Math.round(imagen.height * escala);
+  const ctx = lienzo.getContext('2d');
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, lienzo.width, lienzo.height);
+  ctx.drawImage(imagen, 0, 0, lienzo.width, lienzo.height);
+  return { nombre: archivo.name, tipo: 'image/jpeg', datos: lienzo.toDataURL('image/jpeg', 0.75) };
+}
+
+function leerComoDataURL(archivo) {
+  return new Promise((resolver, fallar) => {
+    const lector = new FileReader();
+    lector.onload = () => resolver(lector.result);
+    lector.onerror = () => fallar(new Error('No se pudo leer el archivo.'));
+    lector.readAsDataURL(archivo);
+  });
+}
+
+function cargarImagen(src) {
+  return new Promise((resolver, fallar) => {
+    const imagen = new Image();
+    imagen.onload = () => resolver(imagen);
+    imagen.onerror = () => fallar(new Error('No se pudo abrir la imagen. Prueba con JPG, PNG o PDF.'));
+    imagen.src = src;
+  });
+}
+
+let urlTemporal = null;
+
+async function verVoucher(id) {
+  const pago = buscarPago(id);
+  if (!pago || !pago.voucher) return;
+
+  $('#ver-titulo').textContent = `Voucher — ${pago.beneficiario}`;
+  $('#ver-detalle').textContent =
+    `${pago.concepto} · ${soles(pago.monto)} · Pagado el ${fechaCorta(pago.fechaPago)} por ${pago.medio}`;
+  $('#ver-descargar').href = pago.voucher.datos;
+  $('#ver-descargar').download = pago.voucher.nombre;
+
+  const contenido = $('#ver-contenido');
+  if (pago.voucher.tipo === 'application/pdf') {
+    const archivo = await (await fetch(pago.voucher.datos)).blob();
+    urlTemporal = URL.createObjectURL(archivo);
+    contenido.innerHTML = `<iframe src="${urlTemporal}" title="Voucher en PDF"></iframe>`;
+  } else {
+    contenido.innerHTML = `<img src="${pago.voucher.datos}" alt="Voucher del pago">`;
+  }
+  $('#dlg-ver').showModal();
+}
+
+function cerrarVoucher() {
+  $('#ver-contenido').innerHTML = '';
+  if (urlTemporal) URL.revokeObjectURL(urlTemporal);
+  urlTemporal = null;
+}
+
+// Qué hace cada botón de la tabla
+const ACCIONES = {
+  pagar: (id) => abrirVentanaVoucher(id, 'pagar'),
+  ver: verVoucher,
+};
 
 function cambiarFiltro(evento) {
   vista.filtro = evento.target.value;
@@ -270,6 +432,9 @@ $('#btn-salir').addEventListener('click', cerrarSesion);
 $('#btn-nuevo').addEventListener('click', abrirFormularioPago);
 $('#form-pago').addEventListener('submit', guardarPago);
 $('#filtro-estado').addEventListener('change', cambiarFiltro);
+$('#tabla-pagos').addEventListener('click', clickEnTabla);
+$('#form-voucher').addEventListener('submit', confirmarVoucher);
+$('#dlg-ver').addEventListener('close', cerrarVoucher);
 
 // Botones "Cancelar" de cualquier ventana
 document.querySelectorAll('[data-cerrar]').forEach((boton) => {
