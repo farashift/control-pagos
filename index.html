@@ -175,6 +175,18 @@
     </div>
   </dialog>
 
+  <!-- HU-06: Confirmación antes de eliminar o revertir -->
+  <dialog id="dlg-confirmar">
+    <form method="dialog">
+      <h3 id="confirmar-titulo"></h3>
+      <p id="confirmar-mensaje"></p>
+      <div class="dialogo-botones">
+        <button value="no" class="btn">Cancelar</button>
+        <button value="si" class="btn peligro" id="confirmar-si"></button>
+      </div>
+    </form>
+  </dialog>
+
   <div id="aviso" class="aviso" hidden></div>
 
   <script src="app.js"></script>

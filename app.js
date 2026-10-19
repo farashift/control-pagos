@@ -148,10 +148,19 @@ function render() {
 
 const TIPOS = ['Servicio', 'Proveedor', 'Impuesto', 'Préstamo'];
 
-function abrirFormularioPago() {
+// Sin "pago" abre el formulario vacío; con "pago" lo abre lleno para corregirlo (HU-06)
+function abrirFormularioPago(pago) {
   const form = $('#form-pago');
   form.reset();
   mostrarErrores(form, {});
+  form.dataset.id = pago ? pago.id : '';
+  $('#pago-titulo').textContent = pago ? 'Corregir pago' : 'Registrar pago';
+  if (pago) {
+    for (const campo of ['beneficiario', 'concepto', 'tipo', 'vencimiento']) {
+      form.elements[campo].value = pago[campo];
+    }
+    form.elements.monto.value = pago.monto.toFixed(2);
+  }
   $('#dlg-pago').showModal();
   form.elements.beneficiario.focus();
 }
@@ -193,7 +202,12 @@ function guardarPago(evento) {
   if (Object.keys(errores).length) return; // no se guarda si hay algo que corregir
 
   const pagos = leerPagos();
-  pagos.push({ id: nuevoId(), ...datos, pagado: false }); // nace como "Pendiente"
+  const editando = form.dataset.id;
+  if (editando) {
+    Object.assign(pagos.find((p) => p.id === editando), datos); // HU-06: corrige el mismo pago
+  } else {
+    pagos.push({ id: nuevoId(), ...datos, pagado: false }); // nace como "Pendiente"
+  }
   if (!guardarPagos(pagos)) return;
 
   // Se muestra el mes de su fecha de vencimiento, para que se vea en la lista
@@ -203,7 +217,7 @@ function guardarPago(evento) {
 
   $('#dlg-pago').close();
   render();
-  aviso('Pago registrado como Pendiente');
+  aviso(editando ? 'Pago corregido' : 'Pago registrado como Pendiente');
 }
 
 // ================== HU-03: VER LOS PAGOS DEL MES ==================
@@ -262,8 +276,14 @@ function accionesDe(pago, estado) {
 
   if (estado === 'Pagado') {
     botones.push(boton('ver', pago.id, 'Ver voucher'));
+    if (esAsistente) {
+      botones.push(boton('cambiarVoucher', pago.id, 'Cambiar voucher', 'enlace'));
+      botones.push(boton('revertir', pago.id, 'Volver a pendiente', 'enlace rojo'));
+    }
   } else if (esAsistente) {
     botones.push(boton('pagar', pago.id, 'Marcar como pagado', 'ok'));
+    botones.push(boton('editar', pago.id, 'Editar', 'enlace'));
+    botones.push(boton('eliminar', pago.id, 'Eliminar', 'enlace rojo'));
   }
   return botones.join('');
 }
@@ -416,10 +436,61 @@ function cerrarVoucher() {
   urlTemporal = null;
 }
 
+// ================== HU-06: CORREGIR UN PAGO MAL REGISTRADO ==================
+
+// Ventana de confirmación. Devuelve true si la persona elige el botón rojo.
+function confirmar(titulo, mensaje, textoBoton) {
+  const dialogo = $('#dlg-confirmar');
+  $('#confirmar-titulo').textContent = titulo;
+  $('#confirmar-mensaje').textContent = mensaje;
+  $('#confirmar-si').textContent = textoBoton;
+  dialogo.returnValue = '';
+  dialogo.showModal();
+  return new Promise((resolver) => {
+    dialogo.addEventListener('close', () => resolver(dialogo.returnValue === 'si'), { once: true });
+  });
+}
+
+async function eliminarPago(id) {
+  const pago = buscarPago(id);
+  const ok = await confirmar(
+    '¿Eliminar este pago?',
+    `${pago.beneficiario} · ${pago.concepto} · ${soles(pago.monto)}. Esta acción no se puede deshacer.`,
+    'Sí, eliminar',
+  );
+  if (!ok) return;
+  guardarPagos(leerPagos().filter((p) => p.id !== id));
+  render();
+  aviso('Pago eliminado');
+}
+
+async function volverAPendiente(id) {
+  const pago = buscarPago(id);
+  const ok = await confirmar(
+    '¿Volver este pago a Pendiente?',
+    `${pago.beneficiario} · ${soles(pago.monto)}. Se quitará la fecha de pago, el medio y el voucher adjunto.`,
+    'Sí, volver a pendiente',
+  );
+  if (!ok) return;
+  const pagos = leerPagos();
+  const elegido = pagos.find((p) => p.id === id);
+  elegido.pagado = false;
+  delete elegido.fechaPago;
+  delete elegido.medio;
+  delete elegido.voucher;
+  guardarPagos(pagos);
+  render();
+  aviso('El pago volvió a Pendiente');
+}
+
 // Qué hace cada botón de la tabla
 const ACCIONES = {
   pagar: (id) => abrirVentanaVoucher(id, 'pagar'),
   ver: verVoucher,
+  editar: (id) => abrirFormularioPago(buscarPago(id)),
+  eliminar: eliminarPago,
+  cambiarVoucher: (id) => abrirVentanaVoucher(id, 'reemplazar'),
+  revertir: volverAPendiente,
 };
 
 function cambiarFiltro(evento) {
@@ -483,7 +554,7 @@ function clickEnResumen(evento) {
 
 $('#form-login').addEventListener('submit', iniciarSesion);
 $('#btn-salir').addEventListener('click', cerrarSesion);
-$('#btn-nuevo').addEventListener('click', abrirFormularioPago);
+$('#btn-nuevo').addEventListener('click', () => abrirFormularioPago());
 $('#form-pago').addEventListener('submit', guardarPago);
 $('#filtro-estado').addEventListener('change', cambiarFiltro);
 $('#tabla-pagos').addEventListener('click', clickEnTabla);
