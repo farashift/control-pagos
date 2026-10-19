@@ -103,7 +103,33 @@ input:focus, select:focus { outline: 2px solid var(--primario); outline-offset: 
 .usuario { margin-left: auto; color: var(--suave); font-size: .9rem; }
 .contenido { max-width: 1100px; margin: 0 auto; padding: 1.25rem 16px 3rem; }
 
+/* Solo la asistente registra y corrige pagos */
+body:not([data-rol="asistente"]) .solo-asistente { display: none !important; }
+
+/* ================== HU-02: FORMULARIO DE PAGO ================== */
+.lista-cabecera { display: flex; align-items: center; gap: .75rem; flex-wrap: wrap; }
+.lista-cabecera h3 { margin-right: auto; }
+
+dialog {
+  border: none;
+  border-radius: var(--radio);
+  padding: 1.4rem;
+  width: min(480px, calc(100% - 32px));
+  box-shadow: 0 20px 50px rgba(0, 0, 0, .25);
+  color: var(--texto);
+}
+dialog::backdrop { background: rgba(16, 24, 40, .45); }
+dialog h3 { font-size: 1.2rem; }
+
+.fila-2 { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+.campo-error { display: block; color: var(--mal); font-size: .82rem; min-height: 0; margin-top: .2rem; }
+.campo-error:empty { display: none; }
+input.invalido, select.invalido { border-color: var(--mal); background: var(--mal-fondo); }
+
+.dialogo-botones { display: flex; justify-content: flex-end; gap: .5rem; margin-top: 1.4rem; }
+
 @media (max-width: 560px) {
+  .fila-2 { grid-template-columns: 1fr; gap: 0; }
   .marca { display: none; }
   .usuario { margin-left: 0; }
   .barra .btn { margin-left: auto; }

@@ -33,8 +33,62 @@
     </header>
 
     <main class="contenido">
+      <section class="tarjeta">
+        <div class="lista-cabecera">
+          <h3>Pagos del mes</h3>
+          <button id="btn-nuevo" class="btn primario solo-asistente">+ Registrar pago</button>
+        </div>
+      </section>
     </main>
   </div>
+
+  <!-- HU-02: Formulario para registrar un pago (una sola pantalla) -->
+  <dialog id="dlg-pago">
+    <form id="form-pago" novalidate>
+      <h3 id="pago-titulo">Registrar pago</h3>
+
+      <label>¿A quién se paga? (beneficiario)
+        <input name="beneficiario" placeholder="Ej. Hidrandina, SUNAT, Distribuidora Norte">
+      </label>
+      <small class="campo-error" data-para="beneficiario"></small>
+
+      <label>Concepto
+        <input name="concepto" placeholder="Ej. Luz de octubre">
+      </label>
+      <small class="campo-error" data-para="concepto"></small>
+
+      <div class="fila-2">
+        <div>
+          <label>Tipo de pago
+            <select name="tipo">
+              <option value="">Elige…</option>
+              <option>Servicio</option>
+              <option>Proveedor</option>
+              <option>Impuesto</option>
+              <option>Préstamo</option>
+            </select>
+          </label>
+          <small class="campo-error" data-para="tipo"></small>
+        </div>
+        <div>
+          <label>Monto (S/)
+            <input name="monto" inputmode="decimal" placeholder="150.50">
+          </label>
+          <small class="campo-error" data-para="monto"></small>
+        </div>
+      </div>
+
+      <label>Fecha de vencimiento
+        <input name="vencimiento" type="date">
+      </label>
+      <small class="campo-error" data-para="vencimiento"></small>
+
+      <div class="dialogo-botones">
+        <button type="button" class="btn" data-cerrar>Cancelar</button>
+        <button type="submit" class="btn primario">Guardar</button>
+      </div>
+    </form>
+  </dialog>
 
   <div id="aviso" class="aviso" hidden></div>
 
