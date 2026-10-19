@@ -1,6 +1,6 @@
 # Verificación de criterios de aceptación — Sprint 1
 
-Sistema: https://santiag0507.github.io/prestamos/
+Sistema: https://farashift.github.io/control-pagos/
 Usuarios: `asistente / asistente123` · `gerente / gerente123`
 
 Cada criterio del documento de historias de usuario, cómo mostrarlo en la demo y su estado.

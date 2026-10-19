@@ -3,7 +3,8 @@
 Sistema web para que un negocio controle sus **gastos variables** (servicios, proveedores, impuestos SUNAT y préstamos) y deje de pagar moras.
 Proyecto del curso **Agile Development — UPAO**, trabajado con Scrum.
 
-**Sistema publicado:** https://santiag0507.github.io/prestamos/
+**Sistema publicado:** https://farashift.github.io/control-pagos/
+**Repositorio:** https://github.com/farashift/control-pagos
 
 ## Usuarios de prueba
 
