@@ -733,9 +733,18 @@ $('#btn-demo').addEventListener('click', reiniciarDemo);
 
 // Si la asistente registra algo en otra pestaña, esta pantalla se actualiza sola
 // (la sesión se guarda por pestaña, así se puede tener al gerente y a la asistente abiertos a la vez)
-window.addEventListener('storage', () => {
+// Además de escuchar el aviso del navegador, se revisa cada 2 segundos y al volver a la pestaña.
+let ultimosDatos = localStorage.getItem(CLAVE_PAGOS);
+function revisarCambios() {
+  const actuales = localStorage.getItem(CLAVE_PAGOS);
+  if (actuales === ultimosDatos) return;
+  ultimosDatos = actuales;
   if (usuarioActual()) render();
-});
+}
+window.addEventListener('storage', revisarCambios);
+window.addEventListener('focus', revisarCambios);
+document.addEventListener('visibilitychange', revisarCambios);
+setInterval(revisarCambios, 2000);
 
 // Botones "Cancelar" de cualquier ventana
 document.querySelectorAll('[data-cerrar]').forEach((boton) => {
