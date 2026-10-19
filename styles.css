@@ -166,6 +166,45 @@ input.invalido, select.invalido { border-color: var(--mal); background: var(--ma
 
 .vacio { text-align: center; color: var(--suave); padding: 2rem 1rem; margin: 0; }
 
+/* ================== HU-05: RESUMEN DEL MES ================== */
+.resumen { margin-bottom: 1rem; }
+.alerta-vencidos {
+  background: var(--mal-fondo);
+  color: var(--mal);
+  border: 1px solid #f5b5b5;
+  border-left: 6px solid var(--mal);
+  padding: .8rem 1rem;
+  border-radius: 10px;
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+.kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: .75rem; }
+.kpi {
+  background: var(--tarjeta);
+  border-radius: var(--radio);
+  box-shadow: var(--sombra);
+  padding: 1rem;
+  border-top: 4px solid var(--primario);
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  border-left: 0; border-right: 0; border-bottom: 0;
+  cursor: pointer;
+}
+.kpi:hover { filter: brightness(.98); }
+.kpi span { display: block; color: var(--suave); font-size: .85rem; font-weight: 600; }
+.kpi strong { display: block; font-size: 1.45rem; margin: .2rem 0; font-variant-numeric: tabular-nums; }
+.kpi small { color: var(--suave); }
+.kpi.pagado { border-top-color: var(--ok); }
+.kpi.pendiente { border-top-color: #e0a800; }
+.kpi.vencido { border-top-color: var(--mal); }
+.kpi.activo { outline: 2px solid var(--primario); }
+
+@media (max-width: 760px) {
+  .kpis { grid-template-columns: 1fr 1fr; }
+  .kpi strong { font-size: 1.15rem; }
+}
+
 /* ================== HU-04: VOUCHER ================== */
 .btn.ok { background: var(--ok); border-color: var(--ok); color: #fff; }
 .btn.ok:hover { filter: brightness(.92); }

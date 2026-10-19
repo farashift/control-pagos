@@ -98,7 +98,7 @@ function aviso(mensaje) {
 // ================== HU-01: INICIAR SESIÓN ==================
 
 function usuarioActual() {
-  const usuario = localStorage.getItem(CLAVE_SESION);
+  const usuario = sessionStorage.getItem(CLAVE_SESION);
   return USUARIOS.find((u) => u.usuario === usuario) || null;
 }
 
@@ -112,14 +112,14 @@ function iniciarSesion(evento) {
     $('#login-error').hidden = false;
     return;
   }
-  localStorage.setItem(CLAVE_SESION, encontrado.usuario);
+  sessionStorage.setItem(CLAVE_SESION, encontrado.usuario);
   $('#form-login').reset();
   $('#login-error').hidden = true;
   mostrarPantalla();
 }
 
 function cerrarSesion() {
-  localStorage.removeItem(CLAVE_SESION);
+  sessionStorage.removeItem(CLAVE_SESION);
   document.querySelectorAll('dialog[open]').forEach((d) => d.close());
   mostrarPantalla();
 }
@@ -139,6 +139,8 @@ function mostrarPantalla() {
 // Vuelve a dibujar la pantalla principal con los datos actuales
 function render() {
   $('#mes-titulo').textContent = `${MESES[vista.mes]} ${vista.anio}`;
+  $('#filtro-estado').value = vista.filtro;
+  renderResumen();
   renderLista();
 }
 
@@ -422,7 +424,59 @@ const ACCIONES = {
 
 function cambiarFiltro(evento) {
   vista.filtro = evento.target.value;
-  renderLista();
+  render();
+}
+
+// ================== HU-05: VER EL RESUMEN DEL MES ==================
+
+// Suma los mismos pagos que muestra la lista del mes, así los totales siempre coinciden
+function renderResumen() {
+  const totales = {
+    todos:     { centimos: 0, cantidad: 0 },
+    Pagado:    { centimos: 0, cantidad: 0 },
+    Pendiente: { centimos: 0, cantidad: 0 },
+    Vencido:   { centimos: 0, cantidad: 0 },
+  };
+  pagosDelMes().forEach((pago) => {
+    const centimos = Math.round(pago.monto * 100); // en céntimos para no perder decimales
+    for (const grupo of ['todos', estadoDe(pago)]) {
+      totales[grupo].centimos += centimos;
+      totales[grupo].cantidad += 1;
+    }
+  });
+
+  const tarjetas = [
+    ['todos', 'Total a pagar en el mes', 'total'],
+    ['Pagado', 'Pagado', 'pagado'],
+    ['Pendiente', 'Pendiente', 'pendiente'],
+    ['Vencido', 'Vencido', 'vencido'],
+  ];
+  $('#resumen-tarjetas').innerHTML = tarjetas.map(([grupo, titulo, clase]) => {
+    const { centimos, cantidad } = totales[grupo];
+    const activo = vista.filtro === grupo ? 'activo' : '';
+    return `
+      <button class="kpi ${clase} ${activo}" data-filtro="${grupo}" title="Ver solo estos pagos">
+        <span>${titulo}</span>
+        <strong>${soles(centimos / 100)}</strong>
+        <small>${cantidad} ${cantidad === 1 ? 'pago' : 'pagos'}</small>
+      </button>`;
+  }).join('');
+
+  // Aviso destacado si hay pagos vencidos
+  const vencidos = totales.Vencido;
+  const alerta = $('#alerta-vencidos');
+  alerta.hidden = vencidos.cantidad === 0;
+  alerta.textContent = vencidos.cantidad === 1
+    ? `⚠ Hay 1 pago vencido por ${soles(vencidos.centimos / 100)}. Págalo cuanto antes para evitar moras.`
+    : `⚠ Hay ${vencidos.cantidad} pagos vencidos por ${soles(vencidos.centimos / 100)}. Págalos cuanto antes para evitar moras.`;
+}
+
+// Al tocar una tarjeta del resumen, la lista se filtra por ese estado
+function clickEnResumen(evento) {
+  const tarjeta = evento.target.closest('[data-filtro]');
+  if (!tarjeta) return;
+  vista.filtro = tarjeta.dataset.filtro;
+  render();
 }
 
 // ================== ARRANQUE ==================
@@ -435,6 +489,13 @@ $('#filtro-estado').addEventListener('change', cambiarFiltro);
 $('#tabla-pagos').addEventListener('click', clickEnTabla);
 $('#form-voucher').addEventListener('submit', confirmarVoucher);
 $('#dlg-ver').addEventListener('close', cerrarVoucher);
+$('#resumen-tarjetas').addEventListener('click', clickEnResumen);
+
+// Si la asistente registra algo en otra pestaña, esta pantalla se actualiza sola
+// (la sesión se guarda por pestaña, así se puede tener al gerente y a la asistente abiertos a la vez)
+window.addEventListener('storage', () => {
+  if (usuarioActual()) render();
+});
 
 // Botones "Cancelar" de cualquier ventana
 document.querySelectorAll('[data-cerrar]').forEach((boton) => {
