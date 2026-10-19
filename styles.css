@@ -128,6 +128,56 @@ input.invalido, select.invalido { border-color: var(--mal); background: var(--ma
 
 .dialogo-botones { display: flex; justify-content: flex-end; gap: .5rem; margin-top: 1.4rem; }
 
+/* ================== HU-03: LISTA DE PAGOS ================== */
+.mes-nav { display: flex; align-items: center; gap: .75rem; margin-bottom: 1rem; }
+.mes-nav h2 { font-size: 1.5rem; }
+
+.filtro { display: flex; align-items: center; gap: .5rem; margin: 0; font-weight: 600; }
+.filtro select { width: auto; margin: 0; padding: .45rem .6rem; }
+
+.tabla { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+.tabla th {
+  text-align: left;
+  font-size: .78rem;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+  color: var(--suave);
+  padding: .5rem .6rem;
+  border-bottom: 1px solid var(--linea);
+}
+.tabla td { padding: .7rem .6rem; border-bottom: 1px solid var(--linea); vertical-align: middle; }
+.tabla tbody tr:hover { background: #fafbfc; }
+.num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.acciones { text-align: right; white-space: nowrap; }
+.acciones .btn { margin-left: .3rem; }
+.detalle { display: block; color: var(--suave); font-size: .8rem; margin-top: .15rem; }
+
+/* Cada estado con su color */
+.estado {
+  display: inline-block;
+  padding: .2rem .6rem;
+  border-radius: 999px;
+  font-size: .8rem;
+  font-weight: 700;
+}
+.estado.pendiente { background: var(--alerta-fondo); color: var(--alerta); }
+.estado.pagado    { background: var(--ok-fondo);     color: var(--ok); }
+.estado.vencido   { background: var(--mal-fondo);    color: var(--mal); }
+
+.vacio { text-align: center; color: var(--suave); padding: 2rem 1rem; margin: 0; }
+
+/* En celular la tabla se convierte en tarjetas */
+@media (max-width: 760px) {
+  .tabla thead { display: none; }
+  .tabla, .tabla tbody, .tabla tr, .tabla td { display: block; width: 100%; }
+  .tabla tr { border: 1px solid var(--linea); border-radius: 10px; padding: .5rem .75rem; margin-bottom: .75rem; }
+  .tabla td { border: none; padding: .3rem 0; display: flex; justify-content: space-between; gap: 1rem; text-align: right; }
+  .tabla td::before { content: attr(data-etiqueta); color: var(--suave); font-size: .8rem; text-align: left; }
+  .tabla td.acciones { justify-content: flex-end; flex-wrap: wrap; gap: .4rem; padding-top: .6rem; }
+  .tabla td.acciones::before { content: none; }
+  .acciones .btn { margin-left: 0; }
+}
+
 @media (max-width: 560px) {
   .fila-2 { grid-template-columns: 1fr; gap: 0; }
   .marca { display: none; }

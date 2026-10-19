@@ -39,8 +39,37 @@ const $ = (selector) => document.querySelector(selector);
 
 const hoy = new Date();
 
-// Mes que se está mirando en pantalla (por defecto, el actual)
-const vista = { anio: hoy.getFullYear(), mes: hoy.getMonth() };
+// Mes que se está mirando en pantalla (por defecto, el actual) y filtro de estado
+const vista = { anio: hoy.getFullYear(), mes: hoy.getMonth(), filtro: 'todos' };
+
+const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio',
+  'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+
+// 1850.5 -> "S/ 1,850.50"
+function soles(monto) {
+  return 'S/ ' + monto.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+// Fecha de hoy como texto "2026-10-19" (mismo formato que los <input type="date">)
+function hoyISO() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+// "2026-10-19" -> "19/10/2026"
+function fechaCorta(iso) {
+  const [anio, mes, dia] = iso.split('-');
+  return `${dia}/${mes}/${anio}`;
+}
+
+// Evita que un texto escrito por el usuario se interprete como HTML
+function seguro(texto) {
+  return String(texto).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function buscarPago(id) {
+  return leerPagos().find((p) => p.id === id);
+}
 
 function nuevoId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -109,6 +138,8 @@ function mostrarPantalla() {
 
 // Vuelve a dibujar la pantalla principal con los datos actuales
 function render() {
+  $('#mes-titulo').textContent = `${MESES[vista.mes]} ${vista.anio}`;
+  renderLista();
 }
 
 // ================== HU-02: REGISTRAR UN PAGO PENDIENTE ==================
@@ -173,12 +204,72 @@ function guardarPago(evento) {
   aviso('Pago registrado como Pendiente');
 }
 
+// ================== HU-03: VER LOS PAGOS DEL MES ==================
+
+// El estado se calcula cada vez: si no está pagado y la fecha ya pasó, es "Vencido"
+function estadoDe(pago) {
+  if (pago.pagado) return 'Pagado';
+  return pago.vencimiento < hoyISO() ? 'Vencido' : 'Pendiente';
+}
+
+// Pagos cuyo vencimiento cae en el mes que se está viendo, del más próximo al más lejano
+function pagosDelMes() {
+  const prefijo = `${vista.anio}-${String(vista.mes + 1).padStart(2, '0')}`;
+  return leerPagos()
+    .filter((p) => p.vencimiento.startsWith(prefijo))
+    .sort((a, b) => a.vencimiento.localeCompare(b.vencimiento));
+}
+
+function renderLista() {
+  const delMes = pagosDelMes();
+  const visibles = vista.filtro === 'todos'
+    ? delMes
+    : delMes.filter((p) => estadoDe(p) === vista.filtro);
+
+  $('#tabla-pagos tbody').innerHTML = visibles.map(filaPago).join('');
+  $('#tabla-pagos').hidden = visibles.length === 0;
+
+  const vacio = $('#lista-vacia');
+  vacio.hidden = visibles.length > 0;
+  vacio.textContent = delMes.length
+    ? `No hay pagos en estado "${vista.filtro}" en este mes`
+    : 'No hay pagos registrados en este mes';
+}
+
+function filaPago(pago) {
+  const estado = estadoDe(pago);
+  const detalle = pago.pagado
+    ? `<small class="detalle">Pagado el ${fechaCorta(pago.fechaPago)} · ${seguro(pago.medio)}</small>`
+    : '';
+  return `
+    <tr>
+      <td data-etiqueta="Beneficiario"><strong>${seguro(pago.beneficiario)}</strong></td>
+      <td data-etiqueta="Concepto">${seguro(pago.concepto)}</td>
+      <td data-etiqueta="Tipo">${seguro(pago.tipo)}</td>
+      <td data-etiqueta="Monto" class="num">${soles(pago.monto)}</td>
+      <td data-etiqueta="Vencimiento">${fechaCorta(pago.vencimiento)}</td>
+      <td data-etiqueta="Estado"><div><span class="estado ${estado.toLowerCase()}">${estado}</span>${detalle}</div></td>
+      <td class="acciones">${accionesDe(pago, estado)}</td>
+    </tr>`;
+}
+
+// Botones de cada fila (se van agregando en las siguientes historias)
+function accionesDe(pago, estado) {
+  return '';
+}
+
+function cambiarFiltro(evento) {
+  vista.filtro = evento.target.value;
+  renderLista();
+}
+
 // ================== ARRANQUE ==================
 
 $('#form-login').addEventListener('submit', iniciarSesion);
 $('#btn-salir').addEventListener('click', cerrarSesion);
 $('#btn-nuevo').addEventListener('click', abrirFormularioPago);
 $('#form-pago').addEventListener('submit', guardarPago);
+$('#filtro-estado').addEventListener('change', cambiarFiltro);
 
 // Botones "Cancelar" de cualquier ventana
 document.querySelectorAll('[data-cerrar]').forEach((boton) => {

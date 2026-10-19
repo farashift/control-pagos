@@ -33,11 +33,40 @@
     </header>
 
     <main class="contenido">
+      <div class="mes-nav">
+        <h2 id="mes-titulo"></h2>
+      </div>
+
+      <!-- HU-03: Lista de pagos del mes -->
       <section class="tarjeta">
         <div class="lista-cabecera">
           <h3>Pagos del mes</h3>
+          <label class="filtro">Estado
+            <select id="filtro-estado">
+              <option value="todos">Todos</option>
+              <option value="Pendiente">Pendiente</option>
+              <option value="Vencido">Vencido</option>
+              <option value="Pagado">Pagado</option>
+            </select>
+          </label>
           <button id="btn-nuevo" class="btn primario solo-asistente">+ Registrar pago</button>
         </div>
+
+        <table id="tabla-pagos" class="tabla">
+          <thead>
+            <tr>
+              <th>Beneficiario</th>
+              <th>Concepto</th>
+              <th>Tipo</th>
+              <th class="num">Monto</th>
+              <th>Vencimiento</th>
+              <th>Estado</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <p id="lista-vacia" class="vacio" hidden></p>
       </section>
     </main>
   </div>
