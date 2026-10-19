@@ -567,6 +567,109 @@ function irAlMesActual() {
   render();
 }
 
+// ================== DATOS DE DEMOSTRACIÓN ==================
+
+// Fecha "YYYY-MM-DD" en el mes actual + desplazamiento (0 = este mes, -1 = el anterior)
+function fechaDemo(desplazamientoMes, dia) {
+  const ultimoDia = new Date(hoy.getFullYear(), hoy.getMonth() + desplazamientoMes + 1, 0).getDate();
+  const d = new Date(hoy.getFullYear(), hoy.getMonth() + desplazamientoMes, Math.min(dia, ultimoDia));
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+// Dibuja un voucher de ejemplo para los pagos de demostración
+function voucherDemo(pago) {
+  const lienzo = document.createElement('canvas');
+  lienzo.width = 420;
+  lienzo.height = 520;
+  const ctx = lienzo.getContext('2d');
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, 420, 520);
+  ctx.fillStyle = '#1f6feb';
+  ctx.fillRect(0, 0, 420, 70);
+  ctx.fillStyle = '#fff';
+  ctx.textAlign = 'center';
+  ctx.font = 'bold 22px sans-serif';
+  ctx.fillText('CONSTANCIA DE PAGO', 210, 44);
+  ctx.fillStyle = '#667085';
+  ctx.font = '14px sans-serif';
+  ctx.fillText('Voucher de demostración', 210, 100);
+
+  const filas = [
+    ['Beneficiario', pago.beneficiario],
+    ['Concepto', pago.concepto],
+    ['Monto', soles(pago.monto)],
+    ['Fecha de pago', fechaCorta(pago.fechaPago)],
+    ['Medio', pago.medio],
+    ['N° operación', String(100000 + Math.floor(Math.random() * 899999))],
+  ];
+  ctx.textAlign = 'left';
+  filas.forEach(([etiqueta, valor], i) => {
+    const y = 150 + i * 52;
+    ctx.fillStyle = '#667085';
+    ctx.font = '13px sans-serif';
+    ctx.fillText(etiqueta, 40, y);
+    ctx.fillStyle = '#1d2433';
+    ctx.font = 'bold 17px sans-serif';
+    ctx.fillText(valor, 40, y + 22);
+  });
+  ctx.strokeStyle = '#16794c';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(250, 440, 140, 46);
+  ctx.fillStyle = '#16794c';
+  ctx.font = 'bold 18px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('PAGADO', 320, 470);
+
+  return { nombre: 'voucher-demo.jpg', tipo: 'image/jpeg', datos: lienzo.toDataURL('image/jpeg', 0.8) };
+}
+
+function crearDatosDemo() {
+  const pago = (mes, dia, beneficiario, concepto, tipo, monto, pagadoDia, medio) => {
+    const p = { id: nuevoId(), beneficiario, concepto, tipo, monto, vencimiento: fechaDemo(mes, dia), pagado: false };
+    if (pagadoDia) {
+      p.pagado = true;
+      p.fechaPago = fechaDemo(mes, pagadoDia);
+      p.medio = medio;
+      p.voucher = voucherDemo(p);
+    }
+    return p;
+  };
+
+  return [
+    // Mes anterior
+    pago(-1, 5, 'Movistar', 'Internet fibra', 'Servicio', 129.90, 4, 'App del banco'),
+    pago(-1, 12, 'Hidrandina', 'Luz del local', 'Servicio', 231.40, 11, 'Agente'),
+    pago(-1, 15, 'Sedalib', 'Agua del local', 'Servicio', 64.80, 15, 'Efectivo'),
+    pago(-1, 20, 'SUNAT', 'IGV mensual', 'Impuesto', 1730.00, 19, 'App del banco'),
+    pago(-1, 26, 'Distribuidora Norte SAC', 'Factura F001-2231', 'Proveedor', 980.50),
+    pago(-1, 28, 'BCP', 'Préstamo cuota 5/12', 'Préstamo', 1120.00, 27, 'App del banco'),
+    // Mes actual
+    pago(0, 5, 'Movistar', 'Internet fibra', 'Servicio', 129.90, 3, 'App del banco'),
+    pago(0, 12, 'Hidrandina', 'Luz del local', 'Servicio', 245.60),
+    pago(0, 15, 'Sedalib', 'Agua del local', 'Servicio', 68.30, 14, 'Agente'),
+    pago(0, 22, 'SUNAT', 'IGV mensual', 'Impuesto', 1850.00),
+    pago(0, 25, 'Distribuidora Norte SAC', 'Factura F001-2310', 'Proveedor', 3200.00),
+    pago(0, 28, 'BCP', 'Préstamo cuota 6/12', 'Préstamo', 1120.00),
+  ];
+}
+
+async function reiniciarDemo() {
+  const ok = await confirmar(
+    '¿Reiniciar los datos de demostración?',
+    'Se borrarán todos los pagos registrados y se cargarán los pagos de ejemplo.',
+    'Sí, reiniciar',
+  );
+  if (!ok) return;
+  guardarPagos(crearDatosDemo());
+  irAlMesActual();
+  aviso('Datos de demostración cargados');
+}
+
+// La primera vez que se abre el sistema se cargan pagos de ejemplo
+if (localStorage.getItem(CLAVE_PAGOS) === null) {
+  guardarPagos(crearDatosDemo());
+}
+
 // ================== ARRANQUE ==================
 
 $('#form-login').addEventListener('submit', iniciarSesion);
@@ -581,6 +684,7 @@ $('#resumen-tarjetas').addEventListener('click', clickEnResumen);
 $('#mes-anterior').addEventListener('click', () => moverMes(-1));
 $('#mes-siguiente').addEventListener('click', () => moverMes(1));
 $('#mes-actual').addEventListener('click', irAlMesActual);
+$('#btn-demo').addEventListener('click', reiniciarDemo);
 
 // Si la asistente registra algo en otra pestaña, esta pantalla se actualiza sola
 // (la sesión se guarda por pestaña, así se puede tener al gerente y a la asistente abiertos a la vez)
