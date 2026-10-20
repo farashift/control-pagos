@@ -336,7 +336,7 @@ function accionesDe(pago, estado) {
       botones.push(boton('revertir', pago.id, 'Volver a pendiente', 'enlace rojo'));
     }
   } else if (esAsistente) {
-    botones.push(boton('pagarMP', pago.id, 'Pagar con tarjeta', 'mp-boton'));
+    botones.push(boton('pagarMP', pago.id, 'Pagar con Culqi', 'mp-boton'));
     botones.push(boton('pagar', pago.id, 'Marcar como pagado', 'ok'));
     botones.push(boton('editar', pago.id, 'Editar', 'enlace'));
     botones.push(boton('eliminar', pago.id, 'Eliminar', 'enlace rojo'));
@@ -752,7 +752,7 @@ if (localStorage.getItem(CLAVE_PAGOS) === null) {
 }
 
 // ================== HU-08: PAGAR CON TARJETA (CULQI) ==================
-// El botón abre el formulario oficial de Culqi. Culqi convierte la tarjeta en un token (tkn_...)
+// El botón abre el Culqi Checkout Custom (tarjeta o Yape). Culqi convierte el medio de pago en un token
 // y la API (en Vercel, con la llave secreta) hace el cobro. Si Culqi lo aprueba, el pago queda Pagado.
 // La llave pública de Culqi puede estar en la página: solo sirve para crear tokens, no para cobrar.
 
@@ -785,19 +785,21 @@ function errorEnPaso1(mensaje) {
   $('#mp-error').textContent = mensaje;
 }
 
-// Carga el script de Culqi solo la primera vez que se usa
+// Carga el script del Culqi Checkout Custom solo la primera vez que se usa
 function cargarCulqi() {
-  if (window.Culqi) return Promise.resolve();
+  if (window.CulqiCheckout) return Promise.resolve();
   return new Promise((listo, fallo) => {
     const script = document.createElement('script');
-    script.src = 'https://checkout.culqi.com/js/v4';
+    script.src = 'https://js.culqi.com/checkout-js';
     script.onload = () => listo();
     script.onerror = () => fallo(new Error('No se pudo cargar Culqi. Revisa tu internet.'));
     document.head.appendChild(script);
   });
 }
 
-// Paso 1 → abre el formulario de Culqi con el monto del pago
+let checkoutCulqi = null; // instancia de CulqiCheckout del pago en curso
+
+// Paso 1 → abre el formulario de Culqi (tarjeta o Yape) con el monto del pago
 async function abrirFormularioCulqi(evento) {
   evento.preventDefault();
   const pago = buscarPago(pagoMP);
@@ -809,37 +811,56 @@ async function abrirFormularioCulqi(evento) {
   } catch (error) {
     return errorEnPaso1(error.message);
   }
-  Culqi.publicKey = CULQI_LLAVE_PUBLICA;
-  Culqi.settings({
-    title: 'Control de Pagos',
-    currency: 'PEN',
-    amount: Math.round(pago.monto * 100),
+
+  const metodos = { tarjeta: true, yape: true };
+  checkoutCulqi = new CulqiCheckout(CULQI_LLAVE_PUBLICA, {
+    settings: {
+      title: 'Control de Pagos',
+      currency: 'PEN',                       // obligatorio (y necesario para Yape)
+      amount: Math.round(pago.monto * 100),  // en céntimos
+    },
+    options: {
+      lang: 'auto',
+      installments: false,
+      modal: true,
+      paymentMethods: metodos,
+      paymentMethodsSort: Object.keys(metodos),
+    },
+    appearance: {
+      menuType: 'sidebar',
+      buttonCardPayText: `Pagar ${soles(pago.monto)}`,
+      defaultStyle: {
+        bannerColor: '#0f2a43',
+        buttonBackground: '#00a19b',
+        menuColor: '#00a19b',
+        linksColor: '#00a19b',
+        buttonTextColor: '#ffffff',
+        priceColor: '#0f2a43',
+      },
+    },
   });
-  Culqi.options({
-    lang: 'auto',
-    installments: false,
-    paymentMethods: { tarjeta: true, yape: false, bancaMovil: false, agente: false, billetera: false, cuotealo: false },
-  });
-  $('#dlg-mp').close(); // el formulario de Culqi se muestra encima de la página
-  Culqi.open();
+  checkoutCulqi.culqi = alTerminarCulqi; // Culqi llama a esta función con el token o el error
+  $('#dlg-mp').close();                  // el formulario de Culqi se muestra encima de la página
+  checkoutCulqi.open();
 }
 
-// Culqi llama a esta función cuando termina el formulario (con token o con error)
-window.culqi = async function () {
+// Culqi terminó: si hay token se hace el cobro en la API; si no, se muestra el error
+async function alTerminarCulqi() {
+  const culqi = checkoutCulqi;
   const pago = buscarPago(pagoMP);
-  if (!pago) return;
+  if (!culqi || !pago) return;
 
-  if (!Culqi.token) {
-    const mensaje = (Culqi.error && (Culqi.error.user_message || Culqi.error.merchant_message)) || 'Culqi no pudo leer la tarjeta.';
-    Culqi.close();
+  if (!culqi.token) {
+    const mensaje = (culqi.error && (culqi.error.user_message || culqi.error.merchant_message)) || 'Culqi no pudo procesar los datos.';
+    culqi.close();
     $('#dlg-mp').showModal();
     mostrarResultadoMP('rechazado', pago, mensaje);
     return;
   }
 
-  const token = Culqi.token.id;
-  const email = Culqi.token.email;
-  Culqi.close();
+  const token = culqi.token.id;
+  const email = culqi.token.email || 'pagos@controlpagos.pe'; // los tokens de Yape no traen email
+  culqi.close();
   $('#dlg-mp').showModal();
   $('#mp-procesando-texto').textContent = 'Procesando el cobro con Culqi…';
   mostrarPasoMP('mp-procesando');
@@ -872,7 +893,7 @@ window.culqi = async function () {
       ? 'No se pudo conectar con el servidor de pagos. Revisa tu internet e inténtalo otra vez.'
       : error.message);
   }
-};
+}
 
 function mostrarResultadoMP(tipo, pago, mensaje, cargo) {
   const textos = { aprobado: ['✓', '¡Pago aprobado!'], rechazado: ['✕', 'Pago no realizado'] };
@@ -886,7 +907,7 @@ function mostrarResultadoMP(tipo, pago, mensaje, cargo) {
   $('#mp-datos').innerHTML = cargo
     ? `<div><span>N° de operación</span><b>${seguro(cargo.operacion)}</b></div>
        <div><span>Monto</span><b>${soles(cargo.monto)}</b></div>
-       <div><span>Tarjeta</span><b>${seguro(cargo.medio)}</b></div>`
+       <div><span>Medio</span><b>${seguro(cargo.medio)}</b></div>`
     : '';
   $('#mp-ver').hidden = tipo !== 'aprobado';
   $('#mp-reintentar').hidden = tipo !== 'rechazado';
@@ -916,7 +937,7 @@ function comprobanteMP(pago, cargo) {
     ['Concepto', pago.concepto],
     ['Monto', soles(cargo.monto)],
     ['Fecha', fechaCorta(pago.fechaPago)],
-    ['Tarjeta', cargo.medio],
+    ['Medio', cargo.medio],
     ['N° de operación', cargo.operacion],
   ];
   ctx.textAlign = 'left';
