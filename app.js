@@ -140,7 +140,6 @@ function mostrarPantalla() {
   $('#usuario-actual').textContent = usuario.nombre;
   render();
   revisarReinicio();
-  procesarRetornoMP();
 }
 
 // El reinicio de la demo no tiene botón (para no tocarlo por accidente).
@@ -337,7 +336,7 @@ function accionesDe(pago, estado) {
       botones.push(boton('revertir', pago.id, 'Volver a pendiente', 'enlace rojo'));
     }
   } else if (esAsistente) {
-    botones.push(boton('pagarMP', pago.id, 'Pagar con Mercado Pago', 'mp-boton'));
+    botones.push(boton('pagarMP', pago.id, 'Pagar con tarjeta', 'mp-boton'));
     botones.push(boton('pagar', pago.id, 'Marcar como pagado', 'ok'));
     botones.push(boton('editar', pago.id, 'Editar', 'enlace'));
     botones.push(boton('eliminar', pago.id, 'Eliminar', 'enlace rojo'));
@@ -571,7 +570,7 @@ const ACCIONES = {
   eliminar: eliminarPago,
   cambiarVoucher: (id) => abrirVentanaVoucher(id, 'reemplazar'),
   revertir: volverAPendiente,
-  pagarMP: abrirMercadoPago,
+  pagarMP: abrirPagoTarjeta,
 };
 
 function cambiarFiltro(evento) {
@@ -752,13 +751,13 @@ if (localStorage.getItem(CLAVE_PAGOS) === null) {
   guardarPagos(crearDatosDemo());
 }
 
-// ================== HU-08: PAGAR CON MERCADO PAGO ==================
-// El botón lleva al checkout real de Mercado Pago (tarjeta, Yape o dinero en cuenta).
-// La API (en Vercel) guarda en secreto el token de Mercado Pago: crea el checkout y,
-// cuando Mercado Pago devuelve al usuario aquí, consulta el pago para confirmar que fue aprobado.
+// ================== HU-08: PAGAR CON TARJETA (CULQI) ==================
+// El botón abre el formulario oficial de Culqi. Culqi convierte la tarjeta en un token (tkn_...)
+// y la API (en Vercel, con la llave secreta) hace el cobro. Si Culqi lo aprueba, el pago queda Pagado.
+// La llave pública de Culqi puede estar en la página: solo sirve para crear tokens, no para cobrar.
 
-const MP_API = 'https://control-pagos-api.vercel.app/api';
-const CLAVE_RETORNO_MP = 'cp_mp_retorno';
+const CULQI_LLAVE_PUBLICA = '';
+const PAGOS_API = 'https://control-pagos-api.vercel.app/api';
 
 let pagoMP = null; // id del pago que se está pagando
 
@@ -766,149 +765,117 @@ function mostrarPasoMP(paso) {
   for (const id of ['form-mp', 'mp-procesando', 'mp-resultado']) $('#' + id).hidden = id !== paso;
 }
 
-function abrirMercadoPago(id) {
+function abrirPagoTarjeta(id) {
   const pago = buscarPago(id);
   if (!pago || pago.pagado) return;
   pagoMP = id;
   $('#mp-beneficiario').textContent = pago.beneficiario;
   $('#mp-concepto').textContent = `${pago.concepto} · vence el ${fechaCorta(pago.vencimiento)}`;
   $('#mp-monto').textContent = soles(pago.monto);
-  $('#mp-pagar').textContent = `Ir a pagar ${soles(pago.monto)}`;
+  $('#mp-pagar').textContent = `Pagar ${soles(pago.monto)}`;
   $('#mp-error').hidden = true;
   mostrarPasoMP('form-mp');
   $('#dlg-mp').showModal();
 }
 
-// Paso 1 → pide a la API el link de Mercado Pago y lleva al usuario ahí
-async function irAMercadoPago(evento) {
+function errorEnPaso1(mensaje) {
+  mostrarPasoMP('form-mp');
+  if (!$('#dlg-mp').open) $('#dlg-mp').showModal();
+  $('#mp-error').hidden = false;
+  $('#mp-error').textContent = mensaje;
+}
+
+// Carga el script de Culqi solo la primera vez que se usa
+function cargarCulqi() {
+  if (window.Culqi) return Promise.resolve();
+  return new Promise((listo, fallo) => {
+    const script = document.createElement('script');
+    script.src = 'https://checkout.culqi.com/js/v4';
+    script.onload = () => listo();
+    script.onerror = () => fallo(new Error('No se pudo cargar Culqi. Revisa tu internet.'));
+    document.head.appendChild(script);
+  });
+}
+
+// Paso 1 → abre el formulario de Culqi con el monto del pago
+async function abrirFormularioCulqi(evento) {
   evento.preventDefault();
   const pago = buscarPago(pagoMP);
   if (!pago || pago.pagado) return;
+  if (!CULQI_LLAVE_PUBLICA) return errorEnPaso1('Falta configurar la llave pública de Culqi.');
 
-  $('#mp-procesando-texto').textContent = 'Conectando con Mercado Pago…';
-  mostrarPasoMP('mp-procesando');
   try {
-    const respuesta = await fetch(`${MP_API}/crear-preferencia`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        id: pago.id,
-        beneficiario: pago.beneficiario,
-        concepto: pago.concepto,
-        monto: pago.monto,
-        volverA: location.origin + location.pathname,
-      }),
-    });
-    const datos = await respuesta.json().catch(() => ({}));
-    if (!respuesta.ok || !datos.link) throw new Error(datos.error || 'Mercado Pago no respondió.');
-    $('#mp-procesando-texto').textContent = 'Abriendo Mercado Pago…';
-    location.href = datos.link;
+    await cargarCulqi();
   } catch (error) {
-    mostrarPasoMP('form-mp');
-    $('#mp-error').hidden = false;
-    $('#mp-error').textContent = error.message === 'Failed to fetch'
-      ? 'No se pudo conectar con el servidor de pagos. Revisa tu internet e inténtalo otra vez.'
-      : error.message;
+    return errorEnPaso1(error.message);
   }
+  Culqi.publicKey = CULQI_LLAVE_PUBLICA;
+  Culqi.settings({
+    title: 'Control de Pagos',
+    currency: 'PEN',
+    amount: Math.round(pago.monto * 100),
+  });
+  Culqi.options({
+    lang: 'auto',
+    installments: false,
+    paymentMethods: { tarjeta: true, yape: false, bancaMovil: false, agente: false, billetera: false, cuotealo: false },
+  });
+  $('#dlg-mp').close(); // el formulario de Culqi se muestra encima de la página
+  Culqi.open();
 }
 
-// Mercado Pago vuelve con ?payment_id=…&status=…&external_reference=… en el link.
-// Se guarda y se limpia el link, para procesarlo cuando la asistente tenga la sesión abierta.
-function capturarRetornoMP() {
-  const params = new URLSearchParams(location.search);
-  const referencia = params.get('external_reference');
-  if (!referencia) return;
-  sessionStorage.setItem(CLAVE_RETORNO_MP, JSON.stringify({
-    referencia,
-    operacion: params.get('payment_id') || params.get('collection_id'),
-    estado: params.get('status') || params.get('collection_status'),
-  }));
-  history.replaceState(null, '', location.pathname);
-}
-
-async function procesarRetornoMP() {
-  const guardado = sessionStorage.getItem(CLAVE_RETORNO_MP);
-  if (!guardado || usuarioActual()?.rol !== 'asistente') return;
-  sessionStorage.removeItem(CLAVE_RETORNO_MP);
-
-  const { referencia, operacion } = JSON.parse(guardado);
-  const pago = buscarPago(referencia);
+// Culqi llama a esta función cuando termina el formulario (con token o con error)
+window.culqi = async function () {
+  const pago = buscarPago(pagoMP);
   if (!pago) return;
-  pagoMP = referencia;
-  $('#dlg-mp').showModal();
 
-  if (!operacion || operacion === 'null') {
-    mostrarResultadoMP('rechazado', pago, 'No se completó el pago en Mercado Pago. El pago sigue pendiente.');
+  if (!Culqi.token) {
+    const mensaje = (Culqi.error && (Culqi.error.user_message || Culqi.error.merchant_message)) || 'Culqi no pudo leer la tarjeta.';
+    Culqi.close();
+    $('#dlg-mp').showModal();
+    mostrarResultadoMP('rechazado', pago, mensaje);
     return;
   }
 
-  $('#mp-procesando-texto').textContent = 'Confirmando el pago con Mercado Pago…';
+  const token = Culqi.token.id;
+  const email = Culqi.token.email;
+  Culqi.close();
+  $('#dlg-mp').showModal();
+  $('#mp-procesando-texto').textContent = 'Procesando el cobro con Culqi…';
   mostrarPasoMP('mp-procesando');
+
   try {
-    const respuesta = await fetch(`${MP_API}/verificar-pago?id=${encodeURIComponent(operacion)}`);
-    const mp = await respuesta.json().catch(() => ({}));
-    if (!respuesta.ok) throw new Error(mp.error || 'No se pudo confirmar el pago.');
-    if (mp.referencia !== referencia) throw new Error('La operación no corresponde a este pago.');
-
-    if (mp.estado === 'approved') {
-      if (Math.round(mp.monto * 100) !== Math.round(pago.monto * 100)) {
-        throw new Error(`Mercado Pago cobró ${soles(mp.monto)} y el pago registrado es de ${soles(pago.monto)}.`);
-      }
-      const pagos = leerPagos();
-      const elegido = pagos.find((p) => p.id === referencia);
-      elegido.pagado = true;
-      elegido.fechaPago = (mp.fecha || '').slice(0, 10) || hoyISO();
-      elegido.medio = 'Mercado Pago';
-      elegido.operacionMP = mp.operacion;
-      elegido.voucher = comprobanteMP(elegido, mp);
-      guardarPagos(pagos);
-      render();
-      mostrarResultadoMP('aprobado', elegido, '', mp);
-    } else if (mp.estado === 'pending' || mp.estado === 'in_process') {
-      mostrarResultadoMP('pendiente', pago, 'Mercado Pago todavía está procesando el pago. Revísalo en unos minutos.', mp);
-    } else {
-      mostrarResultadoMP('rechazado', pago, motivoRechazo(mp.detalle) + ' El pago sigue pendiente.', mp);
+    const respuesta = await fetch(`${PAGOS_API}/culqi-cargo`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, email, monto: pago.monto, id: pago.id, beneficiario: pago.beneficiario, concepto: pago.concepto }),
+    });
+    const cargo = await respuesta.json().catch(() => ({}));
+    if (!respuesta.ok) {
+      const codigo = cargo.codigo ? ` (código: ${cargo.codigo})` : '';
+      mostrarResultadoMP('rechazado', pago, (cargo.error || 'Culqi rechazó el pago.') + codigo + ' El pago sigue pendiente.');
+      return;
     }
+
+    const pagos = leerPagos();
+    const elegido = pagos.find((p) => p.id === pago.id);
+    elegido.pagado = true;
+    elegido.fechaPago = hoyISO();
+    elegido.medio = 'Culqi';
+    elegido.operacionMP = cargo.operacion;
+    elegido.voucher = comprobanteMP(elegido, cargo);
+    guardarPagos(pagos);
+    render();
+    mostrarResultadoMP('aprobado', elegido, '', cargo);
   } catch (error) {
-    mostrarResultadoMP('rechazado', pago, error.message);
+    mostrarResultadoMP('rechazado', pago, error.message === 'Failed to fetch'
+      ? 'No se pudo conectar con el servidor de pagos. Revisa tu internet e inténtalo otra vez.'
+      : error.message);
   }
-}
+};
 
-function motivoRechazo(detalle) {
-  const motivos = {
-    cc_rejected_high_risk: 'Mercado Pago lo rechazó por prevención de fraude. Prueba con Yape o con dinero en cuenta de Mercado Pago.',
-    cc_rejected_insufficient_amount: 'La tarjeta no tiene fondos suficientes.',
-    cc_rejected_bad_filled_security_code: 'El código de seguridad de la tarjeta es incorrecto.',
-    cc_rejected_bad_filled_date: 'La fecha de vencimiento de la tarjeta es incorrecta.',
-    cc_rejected_bad_filled_card_number: 'El número de la tarjeta es incorrecto.',
-    cc_rejected_bad_filled_other: 'Algún dato de la tarjeta es incorrecto.',
-    cc_rejected_call_for_authorize: 'El banco pide autorizar el pago: llama a tu banco o usa otro medio.',
-    cc_rejected_card_disabled: 'La tarjeta no está habilitada para compras por internet.',
-    cc_rejected_card_error: 'El banco no pudo procesar la tarjeta.',
-    cc_rejected_duplicated_payment: 'Ya se hizo un pago igual hace un momento.',
-    cc_rejected_max_attempts: 'Se superó el número de intentos con esta tarjeta.',
-    cc_rejected_blacklist: 'Mercado Pago no permite pagar con esta tarjeta.',
-    cc_rejected_other_reason: 'El banco de la tarjeta rechazó el pago.',
-    rejected_by_bank: 'El banco rechazó el pago.',
-    rejected_by_regulations: 'El pago fue rechazado por normas de Mercado Pago.',
-    rejected_insufficient_data: 'Faltaron datos para procesar el pago.',
-    rejected_high_risk: 'Mercado Pago lo rechazó por prevención de fraude. Prueba con Yape o con dinero en cuenta.',
-  };
-  return (motivos[detalle] || 'Mercado Pago rechazó el pago.') + (detalle ? ` (código: ${detalle})` : '');
-}
-
-function nombreMedioMP(mp) {
-  const tipos = { account_money: 'Dinero en cuenta', credit_card: 'Tarjeta de crédito', debit_card: 'Tarjeta de débito', bank_transfer: 'Transferencia', ticket: 'Pago en efectivo' };
-  const medio = mp.medio === 'yape' ? 'Yape' : (mp.medio || '').toUpperCase();
-  return [tipos[mp.tipo], medio].filter(Boolean).join(' · ') || 'Mercado Pago';
-}
-
-function mostrarResultadoMP(tipo, pago, mensaje, mp) {
-  const textos = {
-    aprobado: ['✓', '¡Pago aprobado!'],
-    pendiente: ['…', 'Pago en proceso'],
-    rechazado: ['✕', 'Pago no realizado'],
-  };
+function mostrarResultadoMP(tipo, pago, mensaje, cargo) {
+  const textos = { aprobado: ['✓', '¡Pago aprobado!'], rechazado: ['✕', 'Pago no realizado'] };
   const icono = $('#mp-icono');
   icono.className = 'mp-icono ' + tipo;
   icono.textContent = textos[tipo][0];
@@ -916,41 +883,41 @@ function mostrarResultadoMP(tipo, pago, mensaje, mp) {
   $('#mp-detalle').textContent = tipo === 'aprobado'
     ? `Pagaste ${soles(pago.monto)} a ${pago.beneficiario}. Ya quedó marcado como Pagado.`
     : mensaje;
-  $('#mp-datos').innerHTML = mp && mp.operacion
-    ? `<div><span>N° de operación</span><b>${seguro(mp.operacion)}</b></div>
-       <div><span>Monto</span><b>${soles(mp.monto)}</b></div>
-       <div><span>Medio</span><b>${seguro(nombreMedioMP(mp))}</b></div>`
+  $('#mp-datos').innerHTML = cargo
+    ? `<div><span>N° de operación</span><b>${seguro(cargo.operacion)}</b></div>
+       <div><span>Monto</span><b>${soles(cargo.monto)}</b></div>
+       <div><span>Tarjeta</span><b>${seguro(cargo.medio)}</b></div>`
     : '';
   $('#mp-ver').hidden = tipo !== 'aprobado';
   $('#mp-reintentar').hidden = tipo !== 'rechazado';
   mostrarPasoMP('mp-resultado');
-  if (tipo === 'aprobado') aviso('Pago aprobado por Mercado Pago');
+  if (tipo === 'aprobado') aviso('Pago aprobado por Culqi');
 }
 
-// Comprobante con los datos reales de Mercado Pago; queda guardado como voucher del pago
-function comprobanteMP(pago, mp) {
+// Comprobante con los datos del cobro; queda guardado como voucher del pago
+function comprobanteMP(pago, cargo) {
   const lienzo = document.createElement('canvas');
   lienzo.width = 420;
   lienzo.height = 560;
   const ctx = lienzo.getContext('2d');
   ctx.fillStyle = '#fff';
   ctx.fillRect(0, 0, 420, 560);
-  ctx.fillStyle = '#ffe600';
+  ctx.fillStyle = '#0f2a43';
   ctx.fillRect(0, 0, 420, 80);
-  ctx.fillStyle = '#2d3277';
+  ctx.fillStyle = '#fff';
   ctx.textAlign = 'center';
-  ctx.font = 'bold 24px sans-serif';
-  ctx.fillText('mercado pago', 210, 40);
+  ctx.font = 'bold 26px sans-serif';
+  ctx.fillText('culqi', 210, 42);
   ctx.font = 'bold 12px sans-serif';
-  ctx.fillText('COMPROBANTE DE PAGO', 210, 64);
+  ctx.fillText(cargo.prueba ? 'COMPROBANTE DE PAGO · MODO PRUEBA' : 'COMPROBANTE DE PAGO', 210, 64);
 
   const filas = [
     ['Pagaste a', pago.beneficiario],
     ['Concepto', pago.concepto],
-    ['Monto', soles(mp.monto)],
+    ['Monto', soles(cargo.monto)],
     ['Fecha', fechaCorta(pago.fechaPago)],
-    ['Medio', nombreMedioMP(mp)],
-    ['N° de operación', mp.operacion],
+    ['Tarjeta', cargo.medio],
+    ['N° de operación', cargo.operacion],
   ];
   ctx.textAlign = 'left';
   filas.forEach(([etiqueta, valor], i) => {
@@ -962,20 +929,19 @@ function comprobanteMP(pago, mp) {
     ctx.font = 'bold 17px sans-serif';
     ctx.fillText(String(valor).slice(0, 34), 40, y + 22);
   });
-  ctx.strokeStyle = '#009ee3';
+  ctx.strokeStyle = '#00a19b';
   ctx.lineWidth = 3;
   ctx.strokeRect(240, 470, 150, 50);
-  ctx.fillStyle = '#009ee3';
+  ctx.fillStyle = '#00a19b';
   ctx.font = 'bold 18px sans-serif';
   ctx.textAlign = 'center';
   ctx.fillText('APROBADO', 315, 502);
 
-  return { nombre: `mercadopago-${mp.operacion}.jpg`, tipo: 'image/jpeg', datos: lienzo.toDataURL('image/jpeg', 0.85) };
+  return { nombre: `culqi-${cargo.operacion}.jpg`, tipo: 'image/jpeg', datos: lienzo.toDataURL('image/jpeg', 0.85) };
 }
 
-capturarRetornoMP();
-$('#form-mp').addEventListener('submit', irAMercadoPago);
-$('#mp-reintentar').addEventListener('click', () => abrirMercadoPago(pagoMP));
+$('#form-mp').addEventListener('submit', abrirFormularioCulqi);
+$('#mp-reintentar').addEventListener('click', () => abrirPagoTarjeta(pagoMP));
 $('#mp-ver').addEventListener('click', () => {
   $('#dlg-mp').close();
   verVoucher(pagoMP);
