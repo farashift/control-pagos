@@ -876,13 +876,25 @@ async function procesarRetornoMP() {
 
 function motivoRechazo(detalle) {
   const motivos = {
+    cc_rejected_high_risk: 'Mercado Pago lo rechazó por prevención de fraude. Prueba con Yape o con dinero en cuenta de Mercado Pago.',
     cc_rejected_insufficient_amount: 'La tarjeta no tiene fondos suficientes.',
     cc_rejected_bad_filled_security_code: 'El código de seguridad de la tarjeta es incorrecto.',
     cc_rejected_bad_filled_date: 'La fecha de vencimiento de la tarjeta es incorrecta.',
+    cc_rejected_bad_filled_card_number: 'El número de la tarjeta es incorrecto.',
     cc_rejected_bad_filled_other: 'Algún dato de la tarjeta es incorrecto.',
-    cc_rejected_call_for_authorize: 'El banco pide autorizar el pago.',
+    cc_rejected_call_for_authorize: 'El banco pide autorizar el pago: llama a tu banco o usa otro medio.',
+    cc_rejected_card_disabled: 'La tarjeta no está habilitada para compras por internet.',
+    cc_rejected_card_error: 'El banco no pudo procesar la tarjeta.',
+    cc_rejected_duplicated_payment: 'Ya se hizo un pago igual hace un momento.',
+    cc_rejected_max_attempts: 'Se superó el número de intentos con esta tarjeta.',
+    cc_rejected_blacklist: 'Mercado Pago no permite pagar con esta tarjeta.',
+    cc_rejected_other_reason: 'El banco de la tarjeta rechazó el pago.',
+    rejected_by_bank: 'El banco rechazó el pago.',
+    rejected_by_regulations: 'El pago fue rechazado por normas de Mercado Pago.',
+    rejected_insufficient_data: 'Faltaron datos para procesar el pago.',
+    rejected_high_risk: 'Mercado Pago lo rechazó por prevención de fraude. Prueba con Yape o con dinero en cuenta.',
   };
-  return motivos[detalle] || 'Mercado Pago rechazó el pago.';
+  return (motivos[detalle] || 'Mercado Pago rechazó el pago.') + (detalle ? ` (código: ${detalle})` : '');
 }
 
 function nombreMedioMP(mp) {
