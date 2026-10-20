@@ -266,7 +266,15 @@ input[type="file"] { padding: .5rem; background: #f9fafb; }
 .dialogo-mp { padding: 0; overflow: hidden; width: min(440px, calc(100% - 32px)); }
 .mp-cabecera { background: #ffe600; padding: .8rem 1.2rem; display: flex; align-items: center; justify-content: space-between; }
 .mp-logo { font-weight: 800; color: #2d3277; font-size: 1.15rem; letter-spacing: -.02em; }
-.mp-modo { font-size: .7rem; font-weight: 800; background: #2d3277; color: #fff; padding: .2rem .5rem; border-radius: 4px; }
+.mp-candado { font-size: .78rem; font-weight: 700; color: #2d3277; }
+.mp-info { font-size: .88rem; color: var(--suave); background: #f0faff; border-radius: 8px; padding: .7rem .8rem; margin: 0; }
+.mp-error { margin: .8rem 0 0; font-size: .88rem; }
+.mp-icono.pendiente { background: #e0a800; }
+.mp-datos { text-align: left; background: #f2f4f7; border-radius: 10px; padding: .4rem .9rem; margin-top: .8rem; }
+.mp-datos:empty { display: none; }
+.mp-datos div { display: flex; justify-content: space-between; gap: 1rem; padding: .35rem 0; border-bottom: 1px solid var(--linea); font-size: .9rem; }
+.mp-datos div:last-child { border-bottom: 0; }
+.mp-datos span { color: var(--suave); }
 .mp-paso { padding: 1.2rem 1.4rem 1.4rem; }
 .mp-etiqueta { margin: .2rem 0; color: var(--suave); font-size: .85rem; }
 .mp-monto { font-size: 2rem; font-weight: 800; margin: .3rem 0 .8rem; font-variant-numeric: tabular-nums; }

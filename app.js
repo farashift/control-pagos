@@ -139,8 +139,8 @@ function mostrarPantalla() {
   document.body.dataset.rol = usuario.rol;
   $('#usuario-actual').textContent = usuario.nombre;
   render();
-  mostrarSaldo();
   revisarReinicio();
+  procesarRetornoMP();
 }
 
 // El reinicio de la demo no tiene botón (para no tocarlo por accidente).
@@ -743,8 +743,6 @@ async function reiniciarDemo() {
   );
   if (!ok) return;
   guardarPagos(crearDatosDemo());
-  guardarSaldo(SALDO_INICIAL);
-  mostrarSaldo();
   irAlMesActual();
   aviso('Datos de demostración cargados');
 }
@@ -754,116 +752,171 @@ if (localStorage.getItem(CLAVE_PAGOS) === null) {
   guardarPagos(crearDatosDemo());
 }
 
-// ================== HU-08: PAGAR CON MERCADO PAGO (MODO DE PRUEBA) ==================
-// Simula el checkout de Mercado Pago dentro del sistema: no cobra dinero real.
-// La cuenta del negocio tiene un saldo de prueba que baja con cada pago aprobado.
-// Tarjeta de prueba: titular "APRO" se aprueba y "OTHE" se rechaza (como en Mercado Pago).
+// ================== HU-08: PAGAR CON MERCADO PAGO ==================
+// El botón lleva al checkout real de Mercado Pago (tarjeta, Yape o dinero en cuenta).
+// La API (en Vercel) guarda en secreto el token de Mercado Pago: crea el checkout y,
+// cuando Mercado Pago devuelve al usuario aquí, consulta el pago para confirmar que fue aprobado.
 
-const CLAVE_SALDO = 'cp_saldo_mp';
-const SALDO_INICIAL = 1500000; // en céntimos = S/ 15,000.00
-
-function leerSaldo() {
-  const guardado = Number(localStorage.getItem(CLAVE_SALDO));
-  return localStorage.getItem(CLAVE_SALDO) === null || Number.isNaN(guardado) ? SALDO_INICIAL : guardado;
-}
-
-function guardarSaldo(centimos) {
-  localStorage.setItem(CLAVE_SALDO, String(centimos));
-}
-
-function mostrarSaldo() {
-  $('#saldo-mp').textContent = soles(leerSaldo() / 100);
-}
+const MP_API = 'https://control-pagos-api.vercel.app/api';
+const CLAVE_RETORNO_MP = 'cp_mp_retorno';
 
 let pagoMP = null; // id del pago que se está pagando
-
-function abrirMercadoPago(id) {
-  const pago = buscarPago(id);
-  if (!pago || pago.pagado) return;
-  pagoMP = id;
-  const form = $('#form-mp');
-  form.reset();
-  $('#mp-titular-caja').hidden = true;
-  $('#mp-beneficiario').textContent = pago.beneficiario;
-  $('#mp-concepto').textContent = `${pago.concepto} · vence el ${fechaCorta(pago.vencimiento)}`;
-  $('#mp-monto').textContent = soles(pago.monto);
-  $('#mp-saldo-actual').textContent = soles(leerSaldo() / 100);
-  $('#mp-pagar').textContent = `Pagar ${soles(pago.monto)}`;
-  mostrarPasoMP('form-mp');
-  $('#dlg-mp').showModal();
-}
 
 function mostrarPasoMP(paso) {
   for (const id of ['form-mp', 'mp-procesando', 'mp-resultado']) $('#' + id).hidden = id !== paso;
 }
 
-function cambiarMetodoMP() {
-  $('#mp-titular-caja').hidden = $('#form-mp').elements.metodo.value !== 'tarjeta';
+function abrirMercadoPago(id) {
+  const pago = buscarPago(id);
+  if (!pago || pago.pagado) return;
+  pagoMP = id;
+  $('#mp-beneficiario').textContent = pago.beneficiario;
+  $('#mp-concepto').textContent = `${pago.concepto} · vence el ${fechaCorta(pago.vencimiento)}`;
+  $('#mp-monto').textContent = soles(pago.monto);
+  $('#mp-pagar').textContent = `Ir a pagar ${soles(pago.monto)}`;
+  $('#mp-error').hidden = true;
+  mostrarPasoMP('form-mp');
+  $('#dlg-mp').showModal();
 }
 
-async function pagarConMercadoPago(evento) {
+// Paso 1 → pide a la API el link de Mercado Pago y lleva al usuario ahí
+async function irAMercadoPago(evento) {
   evento.preventDefault();
-  const form = evento.target;
   const pago = buscarPago(pagoMP);
   if (!pago || pago.pagado) return;
 
-  const metodo = form.elements.metodo.value;
-  const titular = form.elements.titular.value.trim().toUpperCase();
-  const montoCentimos = Math.round(pago.monto * 100);
-  const saldoAntes = leerSaldo();
-
+  $('#mp-procesando-texto').textContent = 'Conectando con Mercado Pago…';
   mostrarPasoMP('mp-procesando');
-  await new Promise((listo) => setTimeout(listo, 1500)); // tiempo de "procesando"
-  if (!$('#dlg-mp').open) return; // se cerró mientras procesaba
+  try {
+    const respuesta = await fetch(`${MP_API}/crear-preferencia`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: pago.id,
+        beneficiario: pago.beneficiario,
+        concepto: pago.concepto,
+        monto: pago.monto,
+        volverA: location.origin + location.pathname,
+      }),
+    });
+    const datos = await respuesta.json().catch(() => ({}));
+    if (!respuesta.ok || !datos.link) throw new Error(datos.error || 'Mercado Pago no respondió.');
+    $('#mp-procesando-texto').textContent = 'Abriendo Mercado Pago…';
+    location.href = datos.link;
+  } catch (error) {
+    mostrarPasoMP('form-mp');
+    $('#mp-error').hidden = false;
+    $('#mp-error').textContent = error.message === 'Failed to fetch'
+      ? 'No se pudo conectar con el servidor de pagos. Revisa tu internet e inténtalo otra vez.'
+      : error.message;
+  }
+}
 
-  // Reglas de aprobación del modo de prueba
-  let motivo = '';
-  if (metodo === 'tarjeta' && titular !== 'APRO') motivo = 'La tarjeta fue rechazada por el banco emisor (titular de prueba OTHE).';
-  else if (montoCentimos > saldoAntes) motivo = `Saldo insuficiente: la cuenta tiene ${soles(saldoAntes / 100)}.`;
+// Mercado Pago vuelve con ?payment_id=…&status=…&external_reference=… en el link.
+// Se guarda y se limpia el link, para procesarlo cuando la asistente tenga la sesión abierta.
+function capturarRetornoMP() {
+  const params = new URLSearchParams(location.search);
+  const referencia = params.get('external_reference');
+  if (!referencia) return;
+  sessionStorage.setItem(CLAVE_RETORNO_MP, JSON.stringify({
+    referencia,
+    operacion: params.get('payment_id') || params.get('collection_id'),
+    estado: params.get('status') || params.get('collection_status'),
+  }));
+  history.replaceState(null, '', location.pathname);
+}
 
-  if (motivo) {
-    mostrarResultadoMP(false, pago, motivo);
+async function procesarRetornoMP() {
+  const guardado = sessionStorage.getItem(CLAVE_RETORNO_MP);
+  if (!guardado || usuarioActual()?.rol !== 'asistente') return;
+  sessionStorage.removeItem(CLAVE_RETORNO_MP);
+
+  const { referencia, operacion } = JSON.parse(guardado);
+  const pago = buscarPago(referencia);
+  if (!pago) return;
+  pagoMP = referencia;
+  $('#dlg-mp').showModal();
+
+  if (!operacion || operacion === 'null') {
+    mostrarResultadoMP('rechazado', pago, 'No se completó el pago en Mercado Pago. El pago sigue pendiente.');
     return;
   }
 
-  const operacion = String(Date.now()).slice(-10);
-  const saldoDespues = saldoAntes - montoCentimos;
-  const pagos = leerPagos();
-  const elegido = pagos.find((p) => p.id === pago.id);
-  elegido.pagado = true;
-  elegido.fechaPago = hoyISO();
-  elegido.medio = 'Mercado Pago';
-  elegido.operacionMP = operacion;
-  elegido.voucher = comprobanteMP(elegido, operacion, metodo);
-  if (!guardarPagos(pagos)) return;
-  guardarSaldo(saldoDespues);
+  $('#mp-procesando-texto').textContent = 'Confirmando el pago con Mercado Pago…';
+  mostrarPasoMP('mp-procesando');
+  try {
+    const respuesta = await fetch(`${MP_API}/verificar-pago?id=${encodeURIComponent(operacion)}`);
+    const mp = await respuesta.json().catch(() => ({}));
+    if (!respuesta.ok) throw new Error(mp.error || 'No se pudo confirmar el pago.');
+    if (mp.referencia !== referencia) throw new Error('La operación no corresponde a este pago.');
 
-  mostrarSaldo();
-  render();
-  mostrarResultadoMP(true, elegido, '', saldoAntes, saldoDespues, operacion);
+    if (mp.estado === 'approved') {
+      if (Math.round(mp.monto * 100) !== Math.round(pago.monto * 100)) {
+        throw new Error(`Mercado Pago cobró ${soles(mp.monto)} y el pago registrado es de ${soles(pago.monto)}.`);
+      }
+      const pagos = leerPagos();
+      const elegido = pagos.find((p) => p.id === referencia);
+      elegido.pagado = true;
+      elegido.fechaPago = (mp.fecha || '').slice(0, 10) || hoyISO();
+      elegido.medio = 'Mercado Pago';
+      elegido.operacionMP = mp.operacion;
+      elegido.voucher = comprobanteMP(elegido, mp);
+      guardarPagos(pagos);
+      render();
+      mostrarResultadoMP('aprobado', elegido, '', mp);
+    } else if (mp.estado === 'pending' || mp.estado === 'in_process') {
+      mostrarResultadoMP('pendiente', pago, 'Mercado Pago todavía está procesando el pago. Revísalo en unos minutos.', mp);
+    } else {
+      mostrarResultadoMP('rechazado', pago, motivoRechazo(mp.detalle) + ' El pago sigue pendiente.', mp);
+    }
+  } catch (error) {
+    mostrarResultadoMP('rechazado', pago, error.message);
+  }
 }
 
-function mostrarResultadoMP(aprobado, pago, motivo, saldoAntes, saldoDespues, operacion) {
+function motivoRechazo(detalle) {
+  const motivos = {
+    cc_rejected_insufficient_amount: 'La tarjeta no tiene fondos suficientes.',
+    cc_rejected_bad_filled_security_code: 'El código de seguridad de la tarjeta es incorrecto.',
+    cc_rejected_bad_filled_date: 'La fecha de vencimiento de la tarjeta es incorrecta.',
+    cc_rejected_bad_filled_other: 'Algún dato de la tarjeta es incorrecto.',
+    cc_rejected_call_for_authorize: 'El banco pide autorizar el pago.',
+  };
+  return motivos[detalle] || 'Mercado Pago rechazó el pago.';
+}
+
+function nombreMedioMP(mp) {
+  const tipos = { account_money: 'Dinero en cuenta', credit_card: 'Tarjeta de crédito', debit_card: 'Tarjeta de débito', bank_transfer: 'Transferencia', ticket: 'Pago en efectivo' };
+  const medio = mp.medio === 'yape' ? 'Yape' : (mp.medio || '').toUpperCase();
+  return [tipos[mp.tipo], medio].filter(Boolean).join(' · ') || 'Mercado Pago';
+}
+
+function mostrarResultadoMP(tipo, pago, mensaje, mp) {
+  const textos = {
+    aprobado: ['✓', '¡Pago aprobado!'],
+    pendiente: ['…', 'Pago en proceso'],
+    rechazado: ['✕', 'Pago no realizado'],
+  };
   const icono = $('#mp-icono');
-  icono.className = 'mp-icono ' + (aprobado ? 'aprobado' : 'rechazado');
-  icono.textContent = aprobado ? '✓' : '✕';
-  $('#mp-titulo').textContent = aprobado ? '¡Pago aprobado!' : 'Pago rechazado';
-  $('#mp-detalle').textContent = aprobado
-    ? `Pagaste ${soles(pago.monto)} a ${pago.beneficiario}. Operación N° ${operacion}.`
-    : `${motivo} El pago sigue pendiente.`;
-  $('#mp-saldos').innerHTML = aprobado
-    ? `<div><small>Saldo antes</small><strong>${soles(saldoAntes / 100)}</strong></div>
-       <span>→</span>
-       <div><small>Saldo después</small><strong>${soles(saldoDespues / 100)}</strong></div>`
+  icono.className = 'mp-icono ' + tipo;
+  icono.textContent = textos[tipo][0];
+  $('#mp-titulo').textContent = textos[tipo][1];
+  $('#mp-detalle').textContent = tipo === 'aprobado'
+    ? `Pagaste ${soles(pago.monto)} a ${pago.beneficiario}. Ya quedó marcado como Pagado.`
+    : mensaje;
+  $('#mp-datos').innerHTML = mp && mp.operacion
+    ? `<div><span>N° de operación</span><b>${seguro(mp.operacion)}</b></div>
+       <div><span>Monto</span><b>${soles(mp.monto)}</b></div>
+       <div><span>Medio</span><b>${seguro(nombreMedioMP(mp))}</b></div>`
     : '';
-  $('#mp-ver').hidden = !aprobado;
-  $('#mp-reintentar').hidden = aprobado;
+  $('#mp-ver').hidden = tipo !== 'aprobado';
+  $('#mp-reintentar').hidden = tipo !== 'rechazado';
   mostrarPasoMP('mp-resultado');
-  if (aprobado) aviso('Pago aprobado por Mercado Pago');
+  if (tipo === 'aprobado') aviso('Pago aprobado por Mercado Pago');
 }
 
-// Comprobante que queda guardado como voucher del pago
-function comprobanteMP(pago, operacion, metodo) {
+// Comprobante con los datos reales de Mercado Pago; queda guardado como voucher del pago
+function comprobanteMP(pago, mp) {
   const lienzo = document.createElement('canvas');
   lienzo.width = 420;
   lienzo.height = 560;
@@ -877,15 +930,15 @@ function comprobanteMP(pago, operacion, metodo) {
   ctx.font = 'bold 24px sans-serif';
   ctx.fillText('mercado pago', 210, 40);
   ctx.font = 'bold 12px sans-serif';
-  ctx.fillText('COMPROBANTE DE PAGO · MODO DE PRUEBA', 210, 64);
+  ctx.fillText('COMPROBANTE DE PAGO', 210, 64);
 
   const filas = [
     ['Pagaste a', pago.beneficiario],
     ['Concepto', pago.concepto],
-    ['Monto', soles(pago.monto)],
+    ['Monto', soles(mp.monto)],
     ['Fecha', fechaCorta(pago.fechaPago)],
-    ['Medio', metodo === 'tarjeta' ? 'Tarjeta de débito Visa •••• 3704' : 'Dinero en cuenta Mercado Pago'],
-    ['N° de operación', operacion],
+    ['Medio', nombreMedioMP(mp)],
+    ['N° de operación', mp.operacion],
   ];
   ctx.textAlign = 'left';
   filas.forEach(([etiqueta, valor], i) => {
@@ -905,11 +958,11 @@ function comprobanteMP(pago, operacion, metodo) {
   ctx.textAlign = 'center';
   ctx.fillText('APROBADO', 315, 502);
 
-  return { nombre: `mercadopago-${operacion}.jpg`, tipo: 'image/jpeg', datos: lienzo.toDataURL('image/jpeg', 0.85) };
+  return { nombre: `mercadopago-${mp.operacion}.jpg`, tipo: 'image/jpeg', datos: lienzo.toDataURL('image/jpeg', 0.85) };
 }
 
-$('#form-mp').addEventListener('submit', pagarConMercadoPago);
-$('#form-mp').addEventListener('change', cambiarMetodoMP);
+capturarRetornoMP();
+$('#form-mp').addEventListener('submit', irAMercadoPago);
 $('#mp-reintentar').addEventListener('click', () => abrirMercadoPago(pagoMP));
 $('#mp-ver').addEventListener('click', () => {
   $('#dlg-mp').close();
@@ -940,10 +993,7 @@ function revisarCambios() {
   const actuales = localStorage.getItem(CLAVE_PAGOS);
   if (actuales === ultimosDatos) return;
   ultimosDatos = actuales;
-  if (usuarioActual()) {
-    render();
-    mostrarSaldo();
-  }
+  if (usuarioActual()) render();
 }
 window.addEventListener('storage', revisarCambios);
 window.addEventListener('focus', revisarCambios);
