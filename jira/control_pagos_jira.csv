@@ -1,0 +1,122 @@
+﻿"Issue ID","Parent ID","Summary","Issue Type","Description","Priority","Story Points","Sprint","Status","Labels"
+"1","","Control de gastos variables","Epic","Sistema para que el negocio controle sus gastos variables (servicios, proveedores, impuestos SUNAT y préstamos) y deje de pagar moras. Usuarios: gerente y asistente.
+
+Sistema: https://farashift.github.io/control-pagos/
+Repositorio: https://github.com/farashift/control-pagos","Alta","","","En curso","MVP"
+"2","1","HU-01 · Iniciar sesión","Historia","Como gerente o asistente, quiero entrar al sistema con mi usuario y contraseña, para que solo nosotros dos podamos ver y registrar los pagos.
+
+Criterios de aceptación:
+* Existen solo dos usuarios: uno con rol Gerente y otro con rol Asistente.
+* Con usuario y contraseña correctos, el sistema entra a la pantalla principal.
+* Con datos incorrectos, muestra el mensaje ""Usuario o contraseña incorrectos"" y no deja entrar.
+* Sin iniciar sesión no se puede ver ninguna pantalla del sistema.
+* Hay un botón ""Cerrar sesión"" visible en todas las pantallas.
+
+Evidencia: https://farashift.github.io/control-pagos/ (ver CHECKLIST_DE_PRUEBAS.md en el repositorio)","Alta","2","CP Sprint 1","Listo","MVP"
+"3","2","Diseñar pantalla de inicio de sesión","Subtarea","Subtarea de HU-01 · Iniciar sesión.","Alta","","CP Sprint 1","Listo","MVP"
+"4","2","Programar validación de usuarios y roles","Subtarea","Subtarea de HU-01 · Iniciar sesión.","Alta","","CP Sprint 1","Listo","MVP"
+"5","2","Programar cierre de sesión y bloqueo sin sesión","Subtarea","Subtarea de HU-01 · Iniciar sesión.","Alta","","CP Sprint 1","Listo","MVP"
+"6","1","HU-02 · Registrar un pago pendiente","Historia","Como asistente, quiero registrar un pago con el monto, la fecha de vencimiento y a quién se le paga, para no olvidarme de ningún pago.
+
+Criterios de aceptación:
+* El formulario pide: beneficiario, concepto, tipo de pago, monto y fecha de vencimiento.
+* El tipo de pago se elige de una lista: Servicio, Proveedor, Impuesto o Préstamo.
+* El monto debe ser positivo, mayor que 0, con máximo 2 decimales (ej. 150.50), en soles (S/).
+* Si falta un campo obligatorio o el monto es inválido, no se guarda y se muestra qué campo corregir.
+* Al guardar, el pago queda ""Pendiente"" y aparece en la lista del mes de su vencimiento.
+* Registrar un pago no toma más de 1 pantalla.
+
+Evidencia: https://farashift.github.io/control-pagos/ (ver CHECKLIST_DE_PRUEBAS.md en el repositorio)","Alta","3","CP Sprint 1","Listo","MVP"
+"7","6","Diseñar formulario de registro","Subtarea","Subtarea de HU-02 · Registrar un pago pendiente.","Alta","","CP Sprint 1","Listo","MVP"
+"8","6","Programar validaciones de campos y monto","Subtarea","Subtarea de HU-02 · Registrar un pago pendiente.","Alta","","CP Sprint 1","Listo","MVP"
+"9","6","Guardar el pago y mostrarlo en su mes","Subtarea","Subtarea de HU-02 · Registrar un pago pendiente.","Alta","","CP Sprint 1","Listo","MVP"
+"10","1","HU-03 · Ver los pagos del mes","Historia","Como gerente o asistente, quiero ver la lista de pagos del mes actual con su estado, para saber qué falta pagar y qué ya se pagó.
+
+Criterios de aceptación:
+* Al entrar, se muestran por defecto los pagos del mes actual.
+* Cada pago muestra: beneficiario, concepto, tipo, monto, fecha de vencimiento y estado.
+* Los estados son Pendiente, Pagado y Vencido, cada uno con un color distinto.
+* Un pago pendiente cuya fecha de vencimiento ya pasó cambia solo a ""Vencido"".
+* La lista está ordenada por fecha de vencimiento: lo más próximo primero.
+* Se puede filtrar la lista por estado.
+
+Evidencia: https://farashift.github.io/control-pagos/ (ver CHECKLIST_DE_PRUEBAS.md en el repositorio)","Alta","3","CP Sprint 1","Listo","MVP"
+"11","10","Diseñar tabla de pagos y vista en celular","Subtarea","Subtarea de HU-03 · Ver los pagos del mes.","Alta","","CP Sprint 1","Listo","MVP"
+"12","10","Programar cálculo automático de estado (Vencido)","Subtarea","Subtarea de HU-03 · Ver los pagos del mes.","Alta","","CP Sprint 1","Listo","MVP"
+"13","10","Programar orden por vencimiento y filtro por estado","Subtarea","Subtarea de HU-03 · Ver los pagos del mes.","Alta","","CP Sprint 1","Listo","MVP"
+"14","1","HU-04 · Marcar un pago como pagado con su voucher","Historia","Como asistente, quiero marcar un pago como pagado y adjuntar el voucher, para dejar evidencia de que ya se pagó.
+
+Criterios de aceptación:
+* Cada pago pendiente o vencido tiene un botón ""Marcar como pagado"".
+* Al marcarlo se pide: fecha de pago, medio (Agente, App del banco, Efectivo o Tarjeta) y el voucher (imagen o PDF).
+* No se puede marcar como pagado sin adjuntar el voucher.
+* Al confirmar, el estado cambia a ""Pagado"" y se guarda la fecha de pago.
+* Desde el pago se puede abrir y ver el voucher adjunto.
+
+Evidencia: https://farashift.github.io/control-pagos/ (ver CHECKLIST_DE_PRUEBAS.md en el repositorio)","Alta","3","CP Sprint 1","Listo","MVP"
+"15","14","Diseñar ventana de pago con voucher","Subtarea","Subtarea de HU-04 · Marcar un pago como pagado con su voucher.","Alta","","CP Sprint 1","Listo","MVP"
+"16","14","Programar carga y compresión de imagen/PDF","Subtarea","Subtarea de HU-04 · Marcar un pago como pagado con su voucher.","Alta","","CP Sprint 1","Listo","MVP"
+"17","14","Programar visor del voucher","Subtarea","Subtarea de HU-04 · Marcar un pago como pagado con su voucher.","Alta","","CP Sprint 1","Listo","MVP"
+"18","1","HU-05 · Ver el resumen del mes","Historia","Como gerente, quiero ver un resumen de los pagos del mes, para saber de un vistazo cuánto se debe y cuánto ya se pagó.
+
+Criterios de aceptación:
+* Muestra total a pagar en el mes, total pagado, pendiente y vencido, en soles.
+* Muestra cuántos pagos hay en cada estado.
+* Si hay pagos vencidos, aparece un aviso destacado con la cantidad.
+* Los totales se actualizan en cuanto la asistente registra o marca un pago.
+* Los totales coinciden con la suma de los pagos de la lista del mes.
+
+Evidencia: https://farashift.github.io/control-pagos/ (ver CHECKLIST_DE_PRUEBAS.md en el repositorio)","Alta","2","CP Sprint 1","Listo","MVP"
+"19","18","Diseñar tarjetas del resumen","Subtarea","Subtarea de HU-05 · Ver el resumen del mes.","Alta","","CP Sprint 1","Listo","MVP"
+"20","18","Programar totales en céntimos y aviso de vencidos","Subtarea","Subtarea de HU-05 · Ver el resumen del mes.","Alta","","CP Sprint 1","Listo","MVP"
+"21","18","Actualizar el resumen entre pestañas (gerente/asistente)","Subtarea","Subtarea de HU-05 · Ver el resumen del mes.","Alta","","CP Sprint 1","Listo","MVP"
+"22","1","HU-06 · Corregir un pago mal registrado","Historia","Como asistente, quiero corregir un pago que registré mal, para que la información sea correcta sin tener que empezar de nuevo.
+
+Criterios de aceptación:
+* Un pago pendiente se puede editar (monto, fecha, beneficiario, concepto, tipo) o eliminar.
+* Antes de eliminar, el sistema pide confirmación.
+* En un pago ya marcado como pagado, se puede reemplazar el voucher si se subió uno equivocado.
+* Un pago marcado como pagado por error se puede volver a ""Pendiente"", con confirmación.
+* Las ediciones siguen las mismas validaciones de la HU-02.
+
+Evidencia: https://farashift.github.io/control-pagos/ (ver CHECKLIST_DE_PRUEBAS.md en el repositorio)","Media","2","CP Sprint 1","Listo","MVP"
+"23","22","Programar edición de pagos","Subtarea","Subtarea de HU-06 · Corregir un pago mal registrado.","Media","","CP Sprint 1","Listo","MVP"
+"24","22","Programar eliminar y volver a pendiente con confirmación","Subtarea","Subtarea de HU-06 · Corregir un pago mal registrado.","Media","","CP Sprint 1","Listo","MVP"
+"25","22","Programar reemplazo de voucher","Subtarea","Subtarea de HU-06 · Corregir un pago mal registrado.","Media","","CP Sprint 1","Listo","MVP"
+"26","1","HU-07 · Consultar meses anteriores","Historia","Como gerente, quiero ver los pagos de meses anteriores, para revisar qué se pagó y qué quedó pendiente.
+
+Criterios de aceptación:
+* Hay botones para ir al mes anterior y al mes siguiente.
+* Al cambiar de mes, la lista y el resumen muestran solo los pagos de ese mes.
+* Si un mes no tiene pagos, se muestra el mensaje ""No hay pagos registrados en este mes"".
+* Siempre se ve el nombre del mes y año que se está consultando (ej. Octubre 2026).
+
+Evidencia: https://farashift.github.io/control-pagos/ (ver CHECKLIST_DE_PRUEBAS.md en el repositorio)","Media","1","CP Sprint 1","Listo","MVP"
+"27","26","Programar navegación entre meses","Subtarea","Subtarea de HU-07 · Consultar meses anteriores.","Media","","CP Sprint 1","Listo","MVP"
+"28","26","Mostrar mensaje de mes sin pagos","Subtarea","Subtarea de HU-07 · Consultar meses anteriores.","Media","","CP Sprint 1","Listo","MVP"
+"29","1","HU-08 · Pagar con Mercado Pago","Historia","Como asistente, quiero pagar desde el sistema con Mercado Pago, para no tener que ir al banco o a un agente.
+
+Criterios de aceptación:
+* Cada pago pendiente o vencido tiene el botón ""Pagar con Mercado Pago"" (solo la asistente).
+* Antes de ir a pagar se ve a quién y cuánto.
+* El botón lleva al checkout real de Mercado Pago (tarjeta, Yape o dinero en cuenta).
+* Al volver, si Mercado Pago confirma el pago, queda ""Pagado"" con N° de operación y comprobante.
+* Si se cancela o se rechaza, se explica el motivo y el pago sigue pendiente.
+
+Evidencia: https://farashift.github.io/control-pagos/ (ver CHECKLIST_DE_PRUEBAS.md en el repositorio)","Media","5","CP Sprint 1","En curso","MVP"
+"30","29","Crear API en Vercel con el token de Mercado Pago","Subtarea","Subtarea de HU-08 · Pagar con Mercado Pago.","Media","","CP Sprint 1","Listo","MVP"
+"31","29","Conectar el botón al checkout de Mercado Pago","Subtarea","Subtarea de HU-08 · Pagar con Mercado Pago.","Media","","CP Sprint 1","Listo","MVP"
+"32","29","Verificar el pago al volver y marcarlo Pagado","Subtarea","Subtarea de HU-08 · Pagar con Mercado Pago.","Media","","CP Sprint 1","Listo","MVP"
+"33","29","Resolver rechazo del primer cobro real con Mercado Pago","Subtarea","Subtarea de HU-08 · Pagar con Mercado Pago.","Media","","CP Sprint 1","Por hacer","MVP"
+"34","1","HU-09 · Pagos recurrentes automáticos","Historia","Como asistente, quiero que los pagos que se repiten cada mes (como el internet) se creen solos, para no registrarlos cada vez.
+
+Criterios de aceptación:
+* Al registrar un pago se puede marcar como ""se repite cada mes"".
+* Al iniciar un mes nuevo, los pagos recurrentes se crean solos como Pendientes.
+* Se puede dejar de repetir un pago.","Baja","3","","Por hacer","Backlog"
+"35","1","HU-10 · Avisos de vencimiento","Historia","Como gerente, quiero recibir un aviso cuando un pago esté por vencer o ya haya vencido, para actuar a tiempo.
+
+Criterios de aceptación:
+* Se envía un aviso 3 días antes del vencimiento.
+* Se envía un aviso el día que un pago vence sin pagarse.
+* El aviso indica beneficiario, monto y fecha.","Baja","3","","Por hacer","Backlog"
