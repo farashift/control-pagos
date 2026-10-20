@@ -154,9 +154,21 @@ input.invalido, select.invalido { border-color: var(--mal); background: var(--ma
 .tabla td { padding: .7rem .6rem; border-bottom: 1px solid var(--linea); vertical-align: middle; }
 .tabla tbody tr:hover { background: #fafbfc; }
 .num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.acciones { text-align: right; white-space: nowrap; }
-.acciones .btn { margin-left: .3rem; }
+.acciones { text-align: right; width: 1%; }
+.acciones-caja { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: .2rem .3rem; min-width: 190px; }
+.acciones .btn { white-space: nowrap; }
+.tabla td[data-etiqueta="Estado"] { min-width: 120px; }
 .detalle { display: block; color: var(--suave); font-size: .8rem; margin-top: .15rem; }
+.dias.urgente { color: var(--alerta); font-weight: 700; }
+.dias.vencido { color: var(--mal); font-weight: 700; }
+.nota {
+  background: var(--ok-fondo);
+  color: var(--ok);
+  border-radius: 8px;
+  padding: .6rem .8rem;
+  font-size: .88rem;
+  margin: .75rem 0 0;
+}
 
 /* Cada estado con su color */
 .estado {

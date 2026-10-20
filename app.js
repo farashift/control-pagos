@@ -161,6 +161,7 @@ function abrirFormularioPago(pago) {
   mostrarErrores(form, {});
   form.dataset.id = pago ? pago.id : '';
   $('#pago-titulo').textContent = pago ? 'Corregir pago' : 'Registrar pago';
+  $('#pago-nota').hidden = !(pago && pago.pagado);
   if (pago) {
     for (const campo of ['beneficiario', 'concepto', 'tipo', 'vencimiento']) {
       form.elements[campo].value = pago[campo];
@@ -274,11 +275,31 @@ function renderLista() {
     : 'No hay pagos registrados en este mes';
 }
 
+// Días que faltan para el vencimiento (negativo si ya pasó)
+function diasParaVencer(pago) {
+  const [a, m, d] = pago.vencimiento.split('-').map(Number);
+  const [ha, hm, hd] = hoyISO().split('-').map(Number);
+  return Math.round((Date.UTC(a, m - 1, d) - Date.UTC(ha, hm - 1, hd)) / 86400000);
+}
+
+// "Vence hoy", "Vence en 3 días", "Venció hace 2 días": responde el "cuándo" de un vistazo
+function avisoDeDias(pago) {
+  const dias = diasParaVencer(pago);
+  let texto;
+  if (dias === 0) texto = 'Vence hoy';
+  else if (dias === 1) texto = 'Vence mañana';
+  else if (dias > 1) texto = `Vence en ${dias} días`;
+  else if (dias === -1) texto = 'Venció ayer';
+  else texto = `Venció hace ${-dias} días`;
+  const clase = dias < 0 ? 'vencido' : dias <= 3 ? 'urgente' : '';
+  return `<small class="detalle dias ${clase}">${texto}</small>`;
+}
+
 function filaPago(pago) {
   const estado = estadoDe(pago);
   const detalle = pago.pagado
     ? `<small class="detalle">Pagado el ${fechaCorta(pago.fechaPago)} · ${seguro(pago.medio)}</small>`
-    : '';
+    : avisoDeDias(pago);
   return `
     <tr>
       <td data-etiqueta="Beneficiario"><strong>${seguro(pago.beneficiario)}</strong></td>
@@ -287,7 +308,7 @@ function filaPago(pago) {
       <td data-etiqueta="Monto" class="num">${soles(pago.monto)}</td>
       <td data-etiqueta="Vencimiento">${fechaCorta(pago.vencimiento)}</td>
       <td data-etiqueta="Estado"><div><span class="estado ${estado.toLowerCase()}">${estado}</span>${detalle}</div></td>
-      <td class="acciones">${accionesDe(pago, estado)}</td>
+      <td class="acciones"><div class="acciones-caja">${accionesDe(pago, estado)}</div></td>
     </tr>`;
 }
 
@@ -299,6 +320,7 @@ function accionesDe(pago, estado) {
   if (estado === 'Pagado') {
     botones.push(boton('ver', pago.id, 'Ver voucher'));
     if (esAsistente) {
+      botones.push(boton('editar', pago.id, 'Editar', 'enlace')); // corrige monto/concepto sin perder el voucher
       botones.push(boton('cambiarVoucher', pago.id, 'Cambiar voucher', 'enlace'));
       botones.push(boton('revertir', pago.id, 'Volver a pendiente', 'enlace rojo'));
     }
@@ -699,6 +721,7 @@ function crearDatosDemo() {
 }
 
 async function reiniciarDemo() {
+  if (usuarioActual()?.rol !== 'asistente') return; // el gerente no puede borrar datos
   const ok = await confirmar(
     '¿Reiniciar los datos de demostración?',
     'Se borrarán todos los pagos registrados y se cargarán los pagos de ejemplo.',

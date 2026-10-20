@@ -14,7 +14,7 @@ Proyecto del curso **Agile Development — UPAO**, trabajado con Scrum.
 | Gerente (supervisa) | `gerente` | `gerente123` |
 
 La primera vez que se abre, el sistema carga pagos de ejemplo del mes actual y del anterior.
-Se pueden volver a cargar con el enlace **"Reiniciar datos de demostración"** al pie de la página.
+Se pueden volver a cargar con el enlace **"Reiniciar datos de demostración"** al pie de la página (solo en la sesión de la asistente).
 
 ## Historias de usuario cumplidas
 

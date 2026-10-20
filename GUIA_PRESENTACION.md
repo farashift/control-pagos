@@ -32,6 +32,8 @@ El profe tiene las historias en la mano. Recorre cada una diciendo el criterio y
 - Colores: amarillo = Pendiente, verde = Pagado, rojo = Vencido.
 - *"Hidrandina vencía el 12 y no se pagó: el sistema lo pasó solo a Vencido."*
 - Está ordenado del vencimiento más cercano al más lejano.
+- Debajo de cada pago sin pagar dice **cuándo** vence: *Vence hoy*, *Vence en 2 días* (en amarillo si faltan 3 días o menos) o *Venció hace 8 días* (en rojo).
+  *"Usted dijo que quería saber qué pagar, cuándo y cuánto: aquí se ve de un vistazo."*
 - Usa el filtro **Estado** (o haz clic en una tarjeta del resumen) para ver solo los vencidos.
 
 ### HU-04 · Marcar como pagado con voucher
@@ -50,7 +52,9 @@ El profe tiene las historias en la mano. Recorre cada una diciendo el criterio y
 ### HU-06 · Corregir un pago mal registrado (pestaña de la asistente)
 - **Editar** un pendiente: cambia el monto → se valida igual que al registrar.
 - **Eliminar**: pide confirmación antes de borrar.
-- En un pagado: **Cambiar voucher** (si se subió el equivocado) y **Volver a pendiente** (con confirmación).
+- En un pagado: **Editar** (si se equivocó en el monto o el concepto: sigue Pagado y conserva su voucher),
+  **Cambiar voucher** (si se subió el equivocado) y **Volver a pendiente** (con confirmación).
+- El gerente no tiene ninguno de estos botones, ni el de reiniciar datos: no puede borrar nada.
 
 ### HU-07 · Consultar meses anteriores
 - **◀ Anterior**: se ve el mes pasado con su propio resumen. Un pago quedó sin pagar ahí.
@@ -116,8 +120,9 @@ Cada pago se ve así:
 
 - **¿Es seguro el login?** Para el MVP las cuentas están en el código, porque son solo 2 usuarios fijos.
   En el Sprint 2, con la base de datos en la nube, el login pasa al servidor con contraseñas cifradas.
-- **¿Si el gerente lo abre en su celular ve lo mismo?** Todavía no: en el MVP los datos viven en el navegador donde se usa.
-  Eso es justamente la Etapa 2 (base de datos en la nube).
+- **¿El gerente lo puede ver desde su celular?** Respuesta:
+  *"En este MVP se usa en la computadora del negocio; la Etapa 2 lo pasa a la nube."*
+  (Los datos se guardan en el navegador donde se usa. La Etapa 2 del documento de costos cubre esto: 1 semana, S/ 2,400.)
 - **¿Por qué no está el botón de pagar?** Porque necesita conectarse al banco y usted mismo dijo que complicaba el MVP. Está en el backlog como HU-08.
 - **¿Qué pasa si suben un voucher muy pesado?** Las fotos se achican automáticamente antes de guardarse. Los PDF tienen un límite de 1 MB.
 - **¿Cómo trabajaron con Scrum?** Un sprint de 1 semana, 7 historias priorizadas por el cliente; cada historia tiene su commit en GitHub.

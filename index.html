@@ -6,7 +6,7 @@
   <title>Control de Pagos</title>
   <meta name="description" content="Control de gastos variables del negocio: servicios, proveedores, impuestos y préstamos.">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%277%27 fill=%27%231f6feb%27/%3E%3Ctext x=%2716%27 y=%2722%27 font-size=%2716%27 font-family=%27Arial%27 font-weight=%27bold%27 fill=%27white%27 text-anchor=%27middle%27%3ES/%3C/text%3E%3C/svg%3E">
-  <link rel="stylesheet" href="styles.css?v=3">
+  <link rel="stylesheet" href="styles.css?v=5">
 </head>
 <body>
   <noscript><p style="padding:16px">Activa JavaScript para usar el sistema.</p></noscript>
@@ -85,7 +85,7 @@
 
     <footer class="pie">
       Control de Pagos · MVP Sprint 1 · Agile Development UPAO
-      <button id="btn-demo" class="btn enlace">Reiniciar datos de demostración</button>
+      <button id="btn-demo" class="btn enlace solo-asistente">Reiniciar datos de demostración</button>
     </footer>
   </div>
 
@@ -93,6 +93,7 @@
   <dialog id="dlg-pago">
     <form id="form-pago" novalidate>
       <h3 id="pago-titulo">Registrar pago</h3>
+      <p id="pago-nota" class="nota" hidden>Este pago ya está pagado: al guardar seguirá como Pagado y conserva su voucher.</p>
 
       <label>¿A quién se paga? (beneficiario)
         <input name="beneficiario" maxlength="80" placeholder="Ej. Hidrandina, SUNAT, Distribuidora Norte">
@@ -201,6 +202,6 @@
 
   <div id="aviso" class="aviso" hidden></div>
 
-  <script src="app.js?v=3"></script>
+  <script src="app.js?v=5"></script>
 </body>
 </html>
