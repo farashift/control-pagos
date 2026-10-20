@@ -55,3 +55,4 @@ hace falta una base de datos en la nube, que está planificada para el Sprint 2 
 
 - [`COSTO_Y_DURACION.md`](COSTO_Y_DURACION.md) — lo que se presenta al cliente: cuánto cuesta y cuánto demora.
 - [`GUIA_PRESENTACION.md`](GUIA_PRESENTACION.md) — guion de la demo y explicación del código.
+- [`CHECKLIST_DE_PRUEBAS.md`](CHECKLIST_DE_PRUEBAS.md) — prueba de los 36 criterios en el sistema publicado, con capturas.
