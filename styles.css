@@ -255,8 +255,8 @@ input[type="file"] { padding: .5rem; background: #f9fafb; }
 .btn.enlace.rojo { color: var(--mal); }
 .btn.enlace.rojo:hover { background: var(--mal-fondo); }
 
-/* ================== HU-08: PAGO CON CULQI ================== */
-:root { --mp: #00a19b; --mp-oscuro: #00837e; }
+/* ================== HU-08: MERCADO PAGO ================== */
+:root { --mp: #009ee3; --mp-oscuro: #0080b8; }
 .btn.mp-boton { background: var(--mp); border-color: var(--mp); color: #fff; }
 .btn.mp-boton:hover { background: var(--mp-oscuro); }
 .saldo-mp { margin-left: auto; font-size: .85rem; color: var(--suave); background: #e6f6fd; padding: .3rem .6rem; border-radius: 999px; }
@@ -264,10 +264,10 @@ input[type="file"] { padding: .5rem; background: #f9fafb; }
 .saldo-mp + .usuario { margin-left: 0; }
 
 .dialogo-mp { padding: 0; overflow: hidden; width: min(440px, calc(100% - 32px)); }
-.mp-cabecera { background: #0f2a43; padding: .8rem 1.2rem; display: flex; align-items: center; justify-content: space-between; }
-.mp-logo { font-weight: 800; color: #fff; font-size: 1.15rem; letter-spacing: -.02em; }
-.mp-candado { font-size: .78rem; font-weight: 700; color: #b9e9e6; }
-.mp-info { font-size: .88rem; color: var(--suave); background: #eefaf9; border-radius: 8px; padding: .7rem .8rem; margin: 0; }
+.mp-cabecera { background: #ffe600; padding: .8rem 1.2rem; display: flex; align-items: center; justify-content: space-between; }
+.mp-logo { font-weight: 800; color: #2d3277; font-size: 1.15rem; letter-spacing: -.02em; }
+.mp-candado { font-size: .78rem; font-weight: 700; color: #2d3277; }
+.mp-info { font-size: .88rem; color: var(--suave); background: #f0faff; border-radius: 8px; padding: .7rem .8rem; margin: 0; }
 .mp-error { margin: .8rem 0 0; font-size: .88rem; }
 .mp-icono.pendiente { background: #e0a800; }
 .mp-datos { text-align: left; background: #f2f4f7; border-radius: 10px; padding: .4rem .9rem; margin-top: .8rem; }
