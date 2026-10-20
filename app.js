@@ -139,6 +139,7 @@ function mostrarPantalla() {
   document.body.dataset.rol = usuario.rol;
   $('#usuario-actual').textContent = usuario.nombre;
   render();
+  mostrarSaldo();
   revisarReinicio();
 }
 
@@ -336,6 +337,7 @@ function accionesDe(pago, estado) {
       botones.push(boton('revertir', pago.id, 'Volver a pendiente', 'enlace rojo'));
     }
   } else if (esAsistente) {
+    botones.push(boton('pagarMP', pago.id, 'Pagar con Mercado Pago', 'mp-boton'));
     botones.push(boton('pagar', pago.id, 'Marcar como pagado', 'ok'));
     botones.push(boton('editar', pago.id, 'Editar', 'enlace'));
     botones.push(boton('eliminar', pago.id, 'Eliminar', 'enlace rojo'));
@@ -569,6 +571,7 @@ const ACCIONES = {
   eliminar: eliminarPago,
   cambiarVoucher: (id) => abrirVentanaVoucher(id, 'reemplazar'),
   revertir: volverAPendiente,
+  pagarMP: abrirMercadoPago,
 };
 
 function cambiarFiltro(evento) {
@@ -740,6 +743,8 @@ async function reiniciarDemo() {
   );
   if (!ok) return;
   guardarPagos(crearDatosDemo());
+  guardarSaldo(SALDO_INICIAL);
+  mostrarSaldo();
   irAlMesActual();
   aviso('Datos de demostración cargados');
 }
@@ -748,6 +753,168 @@ async function reiniciarDemo() {
 if (localStorage.getItem(CLAVE_PAGOS) === null) {
   guardarPagos(crearDatosDemo());
 }
+
+// ================== HU-08: PAGAR CON MERCADO PAGO (MODO DE PRUEBA) ==================
+// Simula el checkout de Mercado Pago dentro del sistema: no cobra dinero real.
+// La cuenta del negocio tiene un saldo de prueba que baja con cada pago aprobado.
+// Tarjeta de prueba: titular "APRO" se aprueba y "OTHE" se rechaza (como en Mercado Pago).
+
+const CLAVE_SALDO = 'cp_saldo_mp';
+const SALDO_INICIAL = 1500000; // en céntimos = S/ 15,000.00
+
+function leerSaldo() {
+  const guardado = Number(localStorage.getItem(CLAVE_SALDO));
+  return localStorage.getItem(CLAVE_SALDO) === null || Number.isNaN(guardado) ? SALDO_INICIAL : guardado;
+}
+
+function guardarSaldo(centimos) {
+  localStorage.setItem(CLAVE_SALDO, String(centimos));
+}
+
+function mostrarSaldo() {
+  $('#saldo-mp').textContent = soles(leerSaldo() / 100);
+}
+
+let pagoMP = null; // id del pago que se está pagando
+
+function abrirMercadoPago(id) {
+  const pago = buscarPago(id);
+  if (!pago || pago.pagado) return;
+  pagoMP = id;
+  const form = $('#form-mp');
+  form.reset();
+  $('#mp-titular-caja').hidden = true;
+  $('#mp-beneficiario').textContent = pago.beneficiario;
+  $('#mp-concepto').textContent = `${pago.concepto} · vence el ${fechaCorta(pago.vencimiento)}`;
+  $('#mp-monto').textContent = soles(pago.monto);
+  $('#mp-saldo-actual').textContent = soles(leerSaldo() / 100);
+  $('#mp-pagar').textContent = `Pagar ${soles(pago.monto)}`;
+  mostrarPasoMP('form-mp');
+  $('#dlg-mp').showModal();
+}
+
+function mostrarPasoMP(paso) {
+  for (const id of ['form-mp', 'mp-procesando', 'mp-resultado']) $('#' + id).hidden = id !== paso;
+}
+
+function cambiarMetodoMP() {
+  $('#mp-titular-caja').hidden = $('#form-mp').elements.metodo.value !== 'tarjeta';
+}
+
+async function pagarConMercadoPago(evento) {
+  evento.preventDefault();
+  const form = evento.target;
+  const pago = buscarPago(pagoMP);
+  if (!pago || pago.pagado) return;
+
+  const metodo = form.elements.metodo.value;
+  const titular = form.elements.titular.value.trim().toUpperCase();
+  const montoCentimos = Math.round(pago.monto * 100);
+  const saldoAntes = leerSaldo();
+
+  mostrarPasoMP('mp-procesando');
+  await new Promise((listo) => setTimeout(listo, 1500)); // tiempo de "procesando"
+  if (!$('#dlg-mp').open) return; // se cerró mientras procesaba
+
+  // Reglas de aprobación del modo de prueba
+  let motivo = '';
+  if (metodo === 'tarjeta' && titular !== 'APRO') motivo = 'La tarjeta fue rechazada por el banco emisor (titular de prueba OTHE).';
+  else if (montoCentimos > saldoAntes) motivo = `Saldo insuficiente: la cuenta tiene ${soles(saldoAntes / 100)}.`;
+
+  if (motivo) {
+    mostrarResultadoMP(false, pago, motivo);
+    return;
+  }
+
+  const operacion = String(Date.now()).slice(-10);
+  const saldoDespues = saldoAntes - montoCentimos;
+  const pagos = leerPagos();
+  const elegido = pagos.find((p) => p.id === pago.id);
+  elegido.pagado = true;
+  elegido.fechaPago = hoyISO();
+  elegido.medio = 'Mercado Pago';
+  elegido.operacionMP = operacion;
+  elegido.voucher = comprobanteMP(elegido, operacion, metodo);
+  if (!guardarPagos(pagos)) return;
+  guardarSaldo(saldoDespues);
+
+  mostrarSaldo();
+  render();
+  mostrarResultadoMP(true, elegido, '', saldoAntes, saldoDespues, operacion);
+}
+
+function mostrarResultadoMP(aprobado, pago, motivo, saldoAntes, saldoDespues, operacion) {
+  const icono = $('#mp-icono');
+  icono.className = 'mp-icono ' + (aprobado ? 'aprobado' : 'rechazado');
+  icono.textContent = aprobado ? '✓' : '✕';
+  $('#mp-titulo').textContent = aprobado ? '¡Pago aprobado!' : 'Pago rechazado';
+  $('#mp-detalle').textContent = aprobado
+    ? `Pagaste ${soles(pago.monto)} a ${pago.beneficiario}. Operación N° ${operacion}.`
+    : `${motivo} El pago sigue pendiente.`;
+  $('#mp-saldos').innerHTML = aprobado
+    ? `<div><small>Saldo antes</small><strong>${soles(saldoAntes / 100)}</strong></div>
+       <span>→</span>
+       <div><small>Saldo después</small><strong>${soles(saldoDespues / 100)}</strong></div>`
+    : '';
+  $('#mp-ver').hidden = !aprobado;
+  $('#mp-reintentar').hidden = aprobado;
+  mostrarPasoMP('mp-resultado');
+  if (aprobado) aviso('Pago aprobado por Mercado Pago');
+}
+
+// Comprobante que queda guardado como voucher del pago
+function comprobanteMP(pago, operacion, metodo) {
+  const lienzo = document.createElement('canvas');
+  lienzo.width = 420;
+  lienzo.height = 560;
+  const ctx = lienzo.getContext('2d');
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, 420, 560);
+  ctx.fillStyle = '#ffe600';
+  ctx.fillRect(0, 0, 420, 80);
+  ctx.fillStyle = '#2d3277';
+  ctx.textAlign = 'center';
+  ctx.font = 'bold 24px sans-serif';
+  ctx.fillText('mercado pago', 210, 40);
+  ctx.font = 'bold 12px sans-serif';
+  ctx.fillText('COMPROBANTE DE PAGO · MODO DE PRUEBA', 210, 64);
+
+  const filas = [
+    ['Pagaste a', pago.beneficiario],
+    ['Concepto', pago.concepto],
+    ['Monto', soles(pago.monto)],
+    ['Fecha', fechaCorta(pago.fechaPago)],
+    ['Medio', metodo === 'tarjeta' ? 'Tarjeta de débito Visa •••• 3704' : 'Dinero en cuenta Mercado Pago'],
+    ['N° de operación', operacion],
+  ];
+  ctx.textAlign = 'left';
+  filas.forEach(([etiqueta, valor], i) => {
+    const y = 125 + i * 56;
+    ctx.fillStyle = '#667085';
+    ctx.font = '13px sans-serif';
+    ctx.fillText(etiqueta, 40, y);
+    ctx.fillStyle = '#1d2433';
+    ctx.font = 'bold 17px sans-serif';
+    ctx.fillText(String(valor).slice(0, 34), 40, y + 22);
+  });
+  ctx.strokeStyle = '#009ee3';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(240, 470, 150, 50);
+  ctx.fillStyle = '#009ee3';
+  ctx.font = 'bold 18px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('APROBADO', 315, 502);
+
+  return { nombre: `mercadopago-${operacion}.jpg`, tipo: 'image/jpeg', datos: lienzo.toDataURL('image/jpeg', 0.85) };
+}
+
+$('#form-mp').addEventListener('submit', pagarConMercadoPago);
+$('#form-mp').addEventListener('change', cambiarMetodoMP);
+$('#mp-reintentar').addEventListener('click', () => abrirMercadoPago(pagoMP));
+$('#mp-ver').addEventListener('click', () => {
+  $('#dlg-mp').close();
+  verVoucher(pagoMP);
+});
 
 // ================== ARRANQUE ==================
 
@@ -773,7 +940,10 @@ function revisarCambios() {
   const actuales = localStorage.getItem(CLAVE_PAGOS);
   if (actuales === ultimosDatos) return;
   ultimosDatos = actuales;
-  if (usuarioActual()) render();
+  if (usuarioActual()) {
+    render();
+    mostrarSaldo();
+  }
 }
 window.addEventListener('storage', revisarCambios);
 window.addEventListener('focus', revisarCambios);

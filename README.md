@@ -28,6 +28,7 @@ Para volver a cargarlos, abre https://farashift.github.io/control-pagos/#reinici
 | HU-05 | Ver el resumen del mes | `app.js` → `renderResumen` |
 | HU-06 | Corregir un pago mal registrado | `app.js` → `eliminarPago`, `volverAPendiente`, edición en `guardarPago` |
 | HU-07 | Consultar meses anteriores | `app.js` → `moverMes`, `irAlMesActual` |
+| HU-08 | Pagar con Mercado Pago (modo de prueba) | `app.js` → `abrirMercadoPago`, `pagarConMercadoPago`, `comprobanteMP` · `index.html` → `#dlg-mp` |
 
 Cada historia tiene su propio commit en el historial de Git.
 

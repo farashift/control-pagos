@@ -27,6 +27,7 @@
 - Aviso por correo o WhatsApp cuando un pago está por vencer o ya venció.
 
 ### Etapa 3 — Pagar desde el sistema · 1 semana · S/ 2,400
+- ✅ Ya funciona en **modo de prueba** con Mercado Pago (saldo antes/después, aprobado/rechazado, comprobante). Falta conectarlo a la cuenta real del negocio.
 - Botón **"Pagar"** conectado a una cuenta bancaria o pasarela de pagos (muestra saldo antes y después).
 - Se deja para el final porque depende de la aprobación del banco, y el propio cliente indicó que complica el MVP.
 

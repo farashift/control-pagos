@@ -255,6 +255,39 @@ input[type="file"] { padding: .5rem; background: #f9fafb; }
 .btn.enlace.rojo { color: var(--mal); }
 .btn.enlace.rojo:hover { background: var(--mal-fondo); }
 
+/* ================== HU-08: MERCADO PAGO ================== */
+:root { --mp: #009ee3; --mp-oscuro: #0080b8; }
+.btn.mp-boton { background: var(--mp); border-color: var(--mp); color: #fff; }
+.btn.mp-boton:hover { background: var(--mp-oscuro); }
+.saldo-mp { margin-left: auto; font-size: .85rem; color: var(--suave); background: #e6f6fd; padding: .3rem .6rem; border-radius: 999px; }
+.saldo-mp b { color: var(--mp-oscuro); }
+.saldo-mp + .usuario { margin-left: 0; }
+
+.dialogo-mp { padding: 0; overflow: hidden; width: min(440px, calc(100% - 32px)); }
+.mp-cabecera { background: #ffe600; padding: .8rem 1.2rem; display: flex; align-items: center; justify-content: space-between; }
+.mp-logo { font-weight: 800; color: #2d3277; font-size: 1.15rem; letter-spacing: -.02em; }
+.mp-modo { font-size: .7rem; font-weight: 800; background: #2d3277; color: #fff; padding: .2rem .5rem; border-radius: 4px; }
+.mp-paso { padding: 1.2rem 1.4rem 1.4rem; }
+.mp-etiqueta { margin: .2rem 0; color: var(--suave); font-size: .85rem; }
+.mp-monto { font-size: 2rem; font-weight: 800; margin: .3rem 0 .8rem; font-variant-numeric: tabular-nums; }
+.mp-saldo { display: flex; justify-content: space-between; align-items: center; background: #f2f4f7; border-radius: 8px; padding: .6rem .8rem; margin-bottom: .9rem; font-size: .9rem; }
+.mp-opcion { display: flex; gap: .7rem; align-items: center; border: 1px solid var(--linea); border-radius: 10px; padding: .7rem .8rem; margin-top: .5rem; cursor: pointer; font-weight: 400; }
+.mp-opcion:has(input:checked) { border-color: var(--mp); background: #f0faff; }
+.mp-opcion input { width: auto; margin: 0; }
+.mp-opcion b { display: block; }
+.mp-opcion small { color: var(--suave); }
+.mp-centro { text-align: center; }
+.mp-ruedita { width: 44px; height: 44px; border: 4px solid #d9eef8; border-top-color: var(--mp); border-radius: 50%; margin: 1.5rem auto 1rem; animation: girar .8s linear infinite; }
+@keyframes girar { to { transform: rotate(360deg); } }
+.mp-icono { width: 64px; height: 64px; border-radius: 50%; margin: .5rem auto 1rem; display: grid; place-items: center; font-size: 2rem; color: #fff; font-weight: 800; }
+.mp-icono.aprobado { background: var(--ok); }
+.mp-icono.rechazado { background: var(--mal); }
+.mp-saldos { display: grid; grid-template-columns: 1fr auto 1fr; gap: .5rem; align-items: center; background: #f2f4f7; border-radius: 10px; padding: .8rem; margin-top: .8rem; }
+.mp-saldos:empty { display: none; }
+.mp-saldos small { display: block; color: var(--suave); font-size: .75rem; }
+.mp-saldos strong { font-size: 1.05rem; font-variant-numeric: tabular-nums; }
+.mp-botones-final { justify-content: center; flex-wrap: wrap; }
+
 /* En celular la tabla se convierte en tarjetas */
 @media (max-width: 760px) {
   .tabla thead { display: none; }
@@ -268,6 +301,7 @@ input[type="file"] { padding: .5rem; background: #f9fafb; }
 }
 
 @media (max-width: 560px) {
+  .saldo-mp { display: none; }
   .fila-2 { grid-template-columns: 1fr; gap: 0; }
   .marca { display: none; }
   .usuario { margin-left: 0; }

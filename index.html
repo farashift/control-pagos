@@ -6,7 +6,7 @@
   <title>Control de Pagos</title>
   <meta name="description" content="Control de gastos variables del negocio: servicios, proveedores, impuestos y préstamos.">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%277%27 fill=%27%231f6feb%27/%3E%3Ctext x=%2716%27 y=%2722%27 font-size=%2716%27 font-family=%27Arial%27 font-weight=%27bold%27 fill=%27white%27 text-anchor=%27middle%27%3ES/%3C/text%3E%3C/svg%3E">
-  <link rel="stylesheet" href="styles.css?v=6">
+  <link rel="stylesheet" href="styles.css?v=7">
 </head>
 <body>
   <noscript><p style="padding:16px">Activa JavaScript para usar el sistema.</p></noscript>
@@ -31,6 +31,7 @@
   <div id="vista-app" hidden>
     <header class="barra">
       <strong class="marca">Control de Pagos</strong>
+      <span class="saldo-mp" title="Saldo de la cuenta Mercado Pago del negocio (modo de prueba)">Cuenta MP: <b id="saldo-mp"></b></span>
       <span class="usuario">Sesión: <b id="usuario-actual"></b></span>
       <button id="btn-salir" class="btn">Cerrar sesión</button>
     </header>
@@ -199,8 +200,62 @@
     </form>
   </dialog>
 
+  <!-- HU-08: Pagar con Mercado Pago (modo de prueba) -->
+  <dialog id="dlg-mp" class="dialogo-mp">
+    <div class="mp-cabecera">
+      <span class="mp-logo">mercado pago</span>
+      <span class="mp-modo">MODO DE PRUEBA</span>
+    </div>
+
+    <!-- Paso 1: confirmar el pago -->
+    <form id="form-mp" class="mp-paso" novalidate>
+      <p class="mp-etiqueta">Vas a pagar a</p>
+      <h3 id="mp-beneficiario"></h3>
+      <p id="mp-concepto" class="sub"></p>
+      <p id="mp-monto" class="mp-monto"></p>
+
+      <div class="mp-saldo">
+        <span>Saldo de la cuenta del negocio</span>
+        <strong id="mp-saldo-actual"></strong>
+      </div>
+
+      <p class="mp-etiqueta">Medio de pago</p>
+      <label class="mp-opcion"><input type="radio" name="metodo" value="cuenta" checked>
+        <span><b>Dinero en cuenta Mercado Pago</b><small>Se descuenta del saldo del negocio</small></span></label>
+      <label class="mp-opcion"><input type="radio" name="metodo" value="tarjeta">
+        <span><b>Tarjeta de débito Visa de prueba •••• 3704</b><small>Cargo a la cuenta del negocio · titular APRO = aprobado, OTHE = rechazado</small></span></label>
+      <label id="mp-titular-caja" hidden>Nombre del titular (tarjeta de prueba)
+        <input name="titular" value="APRO" autocomplete="off">
+      </label>
+
+      <div class="dialogo-botones">
+        <button type="button" class="btn" data-cerrar>Cancelar</button>
+        <button type="submit" class="btn mp-boton" id="mp-pagar">Pagar</button>
+      </div>
+    </form>
+
+    <!-- Paso 2: procesando -->
+    <div id="mp-procesando" class="mp-paso mp-centro" hidden>
+      <div class="mp-ruedita"></div>
+      <p>Procesando el pago…</p>
+    </div>
+
+    <!-- Paso 3: resultado -->
+    <div id="mp-resultado" class="mp-paso mp-centro" hidden>
+      <div id="mp-icono" class="mp-icono"></div>
+      <h3 id="mp-titulo"></h3>
+      <p id="mp-detalle" class="sub"></p>
+      <div id="mp-saldos" class="mp-saldos"></div>
+      <div class="dialogo-botones mp-botones-final">
+        <button type="button" class="btn" id="mp-ver" hidden>Ver comprobante</button>
+        <button type="button" class="btn" id="mp-reintentar" hidden>Intentar de nuevo</button>
+        <button type="button" class="btn mp-boton" data-cerrar>Listo</button>
+      </div>
+    </div>
+  </dialog>
+
   <div id="aviso" class="aviso" hidden></div>
 
-  <script src="app.js?v=6"></script>
+  <script src="app.js?v=7"></script>
 </body>
 </html>
