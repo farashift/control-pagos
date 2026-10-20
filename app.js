@@ -332,26 +332,28 @@ function filaPago(pago) {
 // Botones de cada fila según el estado y el rol de quien mira
 function accionesDe(pago, estado) {
   const esAsistente = usuarioActual().rol === 'asistente';
-  const botones = [];
+  const principales = [];
+  const secundarias = [];
 
   if (estado === 'Pagado') {
-    botones.push(boton('ver', pago.id, 'Ver voucher'));
+    principales.push(boton('ver', pago.id, 'Ver voucher', 'suave'));
     if (esAsistente) {
-      botones.push(boton('editar', pago.id, 'Editar', 'enlace')); // corrige monto/concepto sin perder el voucher
-      botones.push(boton('cambiarVoucher', pago.id, 'Cambiar voucher', 'enlace'));
-      botones.push(boton('revertir', pago.id, 'Volver a pendiente', 'enlace rojo'));
+      secundarias.push(boton('editar', pago.id, 'Editar', 'enlace')); // corrige monto/concepto sin perder el voucher
+      secundarias.push(boton('cambiarVoucher', pago.id, 'Cambiar voucher', 'enlace'));
+      secundarias.push(boton('revertir', pago.id, 'Volver a pendiente', 'enlace rojo'));
     }
   } else if (esAsistente) {
-    botones.push(boton('pagarMP', pago.id, 'Pagar con Mercado Pago', 'mp-boton'));
-    botones.push(boton('pagar', pago.id, 'Marcar como pagado', 'ok'));
-    botones.push(boton('editar', pago.id, 'Editar', 'enlace'));
-    botones.push(boton('eliminar', pago.id, 'Eliminar', 'enlace rojo'));
+    principales.push(boton('pagarMP', pago.id, 'Pagar con Mercado Pago', 'mp-boton'));
+    principales.push(boton('pagar', pago.id, 'Marcar como pagado', 'ok'));
+    secundarias.push(boton('editar', pago.id, 'Editar', 'enlace'));
+    secundarias.push(boton('eliminar', pago.id, 'Eliminar', 'enlace rojo'));
   }
-  return botones.join('');
+  return `<div class="acciones-principales">${principales.join('')}</div>`
+    + (secundarias.length ? `<div class="acciones-secundarias">${secundarias.join('')}</div>` : '');
 }
 
 function boton(accion, id, texto, estilo = '') {
-  return `<button class="btn chico ${estilo}" data-accion="${accion}" data-id="${id}">${texto}</button>`;
+  return `<button class="btn chico con-icono ${estilo}" data-accion="${accion}" data-id="${id}" title="${texto}">${texto}</button>`;
 }
 
 // Un solo "escuchador" para todos los botones de la tabla
