@@ -85,5 +85,5 @@ Todos se probaron en el sistema publicado el 19/10/2026.
 |--------|---------|
 | Debajo de cada pago sin pagar: *Vence hoy*, *Vence en 3 días*, *Venció hace 2 días* | Responde el "cuándo" de un vistazo; en amarillo si faltan 3 días o menos |
 | Un pago ya pagado se puede **Editar** (monto, concepto, etc.) sin perder el voucher | Corregir un error sin tener que deshacer el pago |
-| "Reiniciar datos de demostración" solo lo ve la asistente | El gerente supervisa y no puede borrar nada |
+| Sin botón de "Reiniciar datos" en pantalla (solo un link especial para la asistente) | Nadie puede borrar todo por accidente; el gerente no puede borrar nada |
 | Montos aceptan `1,850.00`, `150,50` y `S/ 150` | La asistente escribe el monto como le salga natural |

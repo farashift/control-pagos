@@ -139,6 +139,17 @@ function mostrarPantalla() {
   document.body.dataset.rol = usuario.rol;
   $('#usuario-actual').textContent = usuario.nombre;
   render();
+  revisarReinicio();
+}
+
+// El reinicio de la demo no tiene botón (para no tocarlo por accidente).
+// Se abre con el link .../control-pagos/#reiniciar y solo funciona con la sesión de la asistente.
+function revisarReinicio() {
+  if (location.hash !== '#reiniciar') return;
+  const usuario = usuarioActual();
+  if (!usuario) return; // espera a que inicie sesión
+  history.replaceState(null, '', location.pathname + location.search); // quita #reiniciar del link
+  if (usuario.rol === 'asistente') reiniciarDemo();
 }
 
 // Vuelve a dibujar la pantalla principal con los datos actuales
@@ -752,7 +763,7 @@ $('#resumen-tarjetas').addEventListener('click', clickEnResumen);
 $('#mes-anterior').addEventListener('click', () => moverMes(-1));
 $('#mes-siguiente').addEventListener('click', () => moverMes(1));
 $('#mes-actual').addEventListener('click', irAlMesActual);
-$('#btn-demo').addEventListener('click', reiniciarDemo);
+window.addEventListener('hashchange', revisarReinicio);
 
 // Si la asistente registra algo en otra pestaña, esta pantalla se actualiza sola
 // (la sesión se guarda por pestaña, así se puede tener al gerente y a la asistente abiertos a la vez)

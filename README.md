@@ -14,7 +14,8 @@ Proyecto del curso **Agile Development — UPAO**, trabajado con Scrum.
 | Gerente (supervisa) | `gerente` | `gerente123` |
 
 La primera vez que se abre, el sistema carga pagos de ejemplo del mes actual y del anterior.
-Se pueden volver a cargar con el enlace **"Reiniciar datos de demostración"** al pie de la página (solo en la sesión de la asistente).
+Para volver a cargarlos, abre https://farashift.github.io/control-pagos/#reiniciar con la sesión de la asistente
+(no hay botón en pantalla, para que nadie lo toque por accidente; con la sesión del gerente no hace nada).
 
 ## Historias de usuario cumplidas
 

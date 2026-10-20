@@ -3,7 +3,8 @@
 ## Antes de empezar (2 minutos antes)
 
 1. Abre el link del sistema en Chrome.
-2. Entra como asistente y haz clic en **"Reiniciar datos de demostración"** (al pie). Así arrancas con datos limpios.
+2. Entra como asistente y luego abre este link: **https://farashift.github.io/control-pagos/#reiniciar** → confirma con **Sí, reiniciar**.
+   Así arrancas con datos limpios. (No hay botón en pantalla a propósito: nadie lo puede tocar por accidente en la demo.)
 3. Ten listo un voucher en el escritorio: una foto o captura de cualquier comprobante (JPG, PNG o PDF).
 4. Abre **dos pestañas**: en una entra como `asistente`, en la otra como `gerente`.
    Cada pestaña mantiene su propia sesión, así puedes mostrar que el gerente ve los cambios al instante.
@@ -54,7 +55,7 @@ El profe tiene las historias en la mano. Recorre cada una diciendo el criterio y
 - **Eliminar**: pide confirmación antes de borrar.
 - En un pagado: **Editar** (si se equivocó en el monto o el concepto: sigue Pagado y conserva su voucher),
   **Cambiar voucher** (si se subió el equivocado) y **Volver a pendiente** (con confirmación).
-- El gerente no tiene ninguno de estos botones, ni el de reiniciar datos: no puede borrar nada.
+- El gerente no tiene ninguno de estos botones, y no puede reiniciar los datos: no puede borrar nada.
 
 ### HU-07 · Consultar meses anteriores
 - **◀ Anterior**: se ve el mes pasado con su propio resumen. Un pago quedó sin pagar ahí.
