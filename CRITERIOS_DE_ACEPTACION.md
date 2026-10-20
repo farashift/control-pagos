@@ -72,7 +72,7 @@ Todos se probaron en el sistema publicado el 19/10/2026.
 
 | # | Criterio | Cómo se muestra | Estado |
 |---|----------|-----------------|--------|
-| 1 | Botones para ir al mes anterior y al siguiente | **◀ Anterior** y **Siguiente ▶** | ✅ |
+| 1 | Botones para ir al mes anterior y al siguiente | **‹ Anterior** y **Siguiente ›** | ✅ |
 | 2 | Al cambiar de mes, lista y resumen muestran solo ese mes | Septiembre tiene sus propios pagos y totales | ✅ |
 | 3 | Mes sin pagos: "No hay pagos registrados en este mes" | Ir a diciembre | ✅ |
 | 4 | Siempre se ve el mes y año consultado (ej. Octubre 2026) | Título central | ✅ |

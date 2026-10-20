@@ -5,17 +5,35 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Control de Pagos</title>
   <meta name="description" content="Control de gastos variables del negocio: servicios, proveedores, impuestos y préstamos.">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%277%27 fill=%27%231f6feb%27/%3E%3Ctext x=%2716%27 y=%2722%27 font-size=%2716%27 font-family=%27Arial%27 font-weight=%27bold%27 fill=%27white%27 text-anchor=%27middle%27%3ES/%3C/text%3E%3C/svg%3E">
-  <link rel="stylesheet" href="styles.css?v=12">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%277%27 fill=%27%234f46e5%27/%3E%3Ctext x=%2716%27 y=%2722%27 font-size=%2716%27 font-family=%27Arial%27 font-weight=%27bold%27 fill=%27white%27 text-anchor=%27middle%27%3ES/%3C/text%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="styles.css?v=14">
 </head>
 <body>
   <noscript><p style="padding:16px">Activa JavaScript para usar el sistema.</p></noscript>
 
   <!-- HU-01: Pantalla de inicio de sesión -->
   <section id="vista-login" class="login">
+    <div class="login-marca">
+      <div>
+        <span class="logo"><span class="logo-marca">S/</span> Control de Pagos</span>
+        <h2>Nunca más un pago olvidado.</h2>
+        <p>Servicios, proveedores, impuestos y préstamos del negocio en un solo lugar, con su fecha de vencimiento y su voucher.</p>
+        <ul class="login-ventajas">
+          <li>Qué pagar este mes, a quién y cuánto</li>
+          <li>Avisos de lo que vence y lo vencido</li>
+          <li>Voucher de cada pago siempre a la mano</li>
+        </ul>
+      </div>
+      <p class="login-pie">MVP · Sprint 1 · Agile Development UPAO</p>
+    </div>
+
+    <div class="login-formulario">
     <form id="form-login" class="tarjeta login-caja" novalidate>
-      <h1>Control de Pagos</h1>
-      <p class="sub">Gastos variables del negocio</p>
+      <h1>Bienvenido 👋</h1>
+      <p class="sub">Ingresa con tu usuario para continuar</p>
       <label>Usuario
         <input id="login-usuario" autocomplete="username" autocapitalize="none" spellcheck="false">
       </label>
@@ -25,23 +43,31 @@
       <p id="login-error" class="error" hidden>Usuario o contraseña incorrectos</p>
       <button class="btn primario" type="submit">Ingresar</button>
     </form>
+    </div>
   </section>
 
   <!-- Pantalla principal: solo se muestra con la sesión iniciada -->
   <div id="vista-app" hidden>
     <header class="barra">
-      <strong class="marca">Control de Pagos</strong>
-      <span class="usuario">Sesión: <b id="usuario-actual"></b></span>
+      <span class="marca logo"><span class="logo-marca">S/</span><span class="logo-texto">Control de Pagos</span></span>
+      <span class="usuario"><span class="avatar-usuario" id="avatar-usuario"></span><span class="rol">Sesión:</span> <b id="usuario-actual"></b></span>
       <button id="btn-salir" class="btn">Cerrar sesión</button>
     </header>
 
     <main class="contenido">
-      <!-- HU-07: Navegar entre meses -->
-      <div class="mes-nav">
-        <button id="mes-anterior" class="btn" aria-label="Mes anterior">◀ Anterior</button>
-        <h2 id="mes-titulo"></h2>
-        <button id="mes-siguiente" class="btn" aria-label="Mes siguiente">Siguiente ▶</button>
-        <button id="mes-actual" class="btn enlace">Volver al mes actual</button>
+      <div class="encabezado">
+        <div class="saludo">
+          <h1 id="saludo"></h1>
+          <p id="saludo-sub"></p>
+        </div>
+
+        <!-- HU-07: Navegar entre meses -->
+        <div class="mes-nav">
+          <button id="mes-anterior" class="btn" aria-label="Mes anterior">‹ Anterior</button>
+          <h2 id="mes-titulo"></h2>
+          <button id="mes-siguiente" class="btn" aria-label="Mes siguiente">Siguiente ›</button>
+          <button id="mes-actual" class="btn enlace">Mes actual</button>
+        </div>
       </div>
 
       <!-- HU-05: Resumen del mes -->
@@ -243,6 +269,6 @@
 
   <div id="aviso" class="aviso" hidden></div>
 
-  <script src="app.js?v=12"></script>
+  <script src="app.js?v=14"></script>
 </body>
 </html>

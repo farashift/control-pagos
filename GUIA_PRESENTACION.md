@@ -58,9 +58,9 @@ El profe tiene las historias en la mano. Recorre cada una diciendo el criterio y
 - El gerente no tiene ninguno de estos botones, y no puede reiniciar los datos: no puede borrar nada.
 
 ### HU-07 · Consultar meses anteriores
-- **◀ Anterior**: se ve el mes pasado con su propio resumen. Un pago quedó sin pagar ahí.
-- **Siguiente ▶** hasta un mes sin pagos → **"No hay pagos registrados en este mes"**.
-- Siempre se ve el nombre del mes y el año. **Volver al mes actual** regresa a hoy.
+- **‹ Anterior**: se ve el mes pasado con su propio resumen. Un pago quedó sin pagar ahí.
+- **Siguiente ›** hasta un mes sin pagos → **"No hay pagos registrados en este mes"**.
+- Siempre se ve el nombre del mes y el año. **Mes actual** regresa a hoy.
 
 ### HU-08 · Pagar con Mercado Pago (pago real)
 - Antes de la clase registra un pago chico, por ejemplo `Prueba Mercado Pago · S/ 1.00`.

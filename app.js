@@ -138,6 +138,11 @@ function mostrarPantalla() {
 
   document.body.dataset.rol = usuario.rol;
   $('#usuario-actual').textContent = usuario.nombre;
+  $('#avatar-usuario').textContent = usuario.nombre.charAt(0);
+  $('#saludo').textContent = `Hola, ${usuario.nombre} 👋`;
+  $('#saludo-sub').textContent = usuario.rol === 'asistente'
+    ? 'Registra los pagos y márcalos cuando estén pagados.'
+    : 'Así van los pagos del negocio este mes.';
   render();
   revisarReinicio();
   procesarRetornoMP();
@@ -314,9 +319,9 @@ function filaPago(pago) {
     : avisoDeDias(pago);
   return `
     <tr>
-      <td data-etiqueta="Beneficiario"><strong>${seguro(pago.beneficiario)}</strong></td>
+      <td data-etiqueta="Beneficiario"><span class="benef" data-inicial="${seguro(pago.beneficiario.charAt(0).toUpperCase())}">${seguro(pago.beneficiario)}</span></td>
       <td data-etiqueta="Concepto">${seguro(pago.concepto)}</td>
-      <td data-etiqueta="Tipo">${seguro(pago.tipo)}</td>
+      <td data-etiqueta="Tipo"><span class="chip-tipo t-${pago.tipo === 'Préstamo' ? 'prestamo' : seguro(pago.tipo.toLowerCase())}">${seguro(pago.tipo)}</span></td>
       <td data-etiqueta="Monto" class="num">${soles(pago.monto)}</td>
       <td data-etiqueta="Vencimiento">${fechaCorta(pago.vencimiento)}</td>
       <td data-etiqueta="Estado"><div><span class="estado ${estado.toLowerCase()}">${estado}</span>${detalle}</div></td>
