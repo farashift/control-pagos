@@ -28,7 +28,7 @@ Para volver a cargarlos, abre https://farashift.github.io/control-pagos/#reinici
 | HU-05 | Ver el resumen del mes | `app.js` → `renderResumen` |
 | HU-06 | Corregir un pago mal registrado | `app.js` → `eliminarPago`, `volverAPendiente`, edición en `guardarPago` |
 | HU-07 | Consultar meses anteriores | `app.js` → `moverMes`, `irAlMesActual` |
-| HU-08 | Pagar con Mercado Pago (modo de prueba) | `app.js` → `abrirMercadoPago`, `pagarConMercadoPago`, `comprobanteMP` · `index.html` → `#dlg-mp` |
+| HU-08 | Pagar con Mercado Pago (pago real, Checkout Pro) | `app.js` → `abrirMercadoPago`, `irAMercadoPago`, `procesarRetornoMP` · API: [control-pagos-api](https://github.com/farashift/control-pagos-api) |
 
 Cada historia tiene su propio commit en el historial de Git.
 
@@ -45,6 +45,13 @@ No necesita servidor ni base de datos: los datos se guardan en el navegador (`lo
 ## Cómo abrirlo en tu computadora
 
 Abre `index.html` con doble clic, o en VS Code usa la extensión **Live Server** → *Open with Live Server*.
+
+## Pago con Mercado Pago (HU-08)
+
+El botón **Pagar con Mercado Pago** lleva al checkout real de Mercado Pago (tarjeta, Yape o dinero en cuenta).
+Una API pequeña en Vercel ([control-pagos-api](https://github.com/farashift/control-pagos-api), `https://control-pagos-api.vercel.app`)
+guarda en secreto el token de Mercado Pago: crea el checkout y, al volver, consulta el pago a Mercado Pago.
+Solo si Mercado Pago lo confirma como aprobado y el monto coincide, el pago queda **Pagado** con su N° de operación y comprobante.
 
 ## Limitación conocida del MVP
 

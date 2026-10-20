@@ -27,7 +27,7 @@
 - Aviso por correo o WhatsApp cuando un pago está por vencer o ya venció.
 
 ### Etapa 3 — Pagar desde el sistema · 1 semana · S/ 2,400
-- ✅ Ya funciona en **modo de prueba** con Mercado Pago (saldo antes/después, aprobado/rechazado, comprobante). Falta conectarlo a la cuenta real del negocio.
+- ✅ Ya funciona: pago real con **Mercado Pago** (Checkout Pro) desde el sistema, con confirmación automática y comprobante.
 - Botón **"Pagar"** conectado a una cuenta bancaria o pasarela de pagos (muestra saldo antes y después).
 - Se deja para el final porque depende de la aprobación del banco, y el propio cliente indicó que complica el MVP.
 
@@ -45,6 +45,7 @@
 | Publicación del sistema (GitHub Pages) | Gratis |
 | Base de datos en la nube (Etapa 2) | Gratis al inicio; aprox. S/ 95 al mes si crece el uso |
 | Dominio propio, ej. `pagosminegocio.pe` (opcional) | Aprox. S/ 60 a S/ 120 al año |
-| Pasarela de pagos (Etapa 3) | Comisión por operación según el banco o la pasarela |
+| API de pagos en Vercel | Gratis (plan Hobby) |
+| Mercado Pago (Etapa 3) | Comisión por cada cobro según la tarifa vigente de Mercado Pago Perú |
 
 *Montos referenciales, en soles, para efectos del curso.*

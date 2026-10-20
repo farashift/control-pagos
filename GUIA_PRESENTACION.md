@@ -62,18 +62,18 @@ El profe tiene las historias en la mano. Recorre cada una diciendo el criterio y
 - **Siguiente ▶** hasta un mes sin pagos → **"No hay pagos registrados en este mes"**.
 - Siempre se ve el nombre del mes y el año. **Volver al mes actual** regresa a hoy.
 
-### HU-08 · Pagar con Mercado Pago (modo de prueba)
-- Arriba a la derecha se ve el **saldo de la cuenta Mercado Pago del negocio** (empieza en S/ 15,000.00).
-- En un pago pendiente → **Pagar con Mercado Pago** → se ve a quién, cuánto y el **saldo antes de pagar**.
-- **Dinero en cuenta** → **Pagar** → *Procesando…* → **¡Pago aprobado!** con N° de operación y **saldo antes → después**.
-  El pago queda *Pagado · Mercado Pago* y **Ver comprobante** abre el comprobante generado.
-- Para mostrar un rechazo: elige **Tarjeta de débito de prueba** y escribe `OTHE` como titular → *Pago rechazado*, el pago sigue pendiente.
-  Con `APRO` se aprueba (son los mismos nombres de prueba que usa Mercado Pago).
-- Un pago mayor al saldo se rechaza por **saldo insuficiente**.
-- *"Está en modo de prueba: no mueve dinero real. Conectarlo a la cuenta real de Mercado Pago es la Etapa 3."*
+### HU-08 · Pagar con Mercado Pago (pago real)
+- Antes de la clase registra un pago chico, por ejemplo `Prueba Mercado Pago · S/ 1.00`.
+- En ese pago → **Pagar con Mercado Pago** → **Ir a pagar S/ 1.00** → se abre el **checkout real de Mercado Pago**.
+- Paga con Yape o tarjeta desde **otra cuenta** (no la que recibe). Mercado Pago te devuelve al sistema solo.
+- El sistema confirma el pago con Mercado Pago → **¡Pago aprobado!** con el **N° de operación real**.
+  El pago queda *Pagado · Mercado Pago* y **Ver comprobante** muestra el comprobante.
+- **Saldo antes y después:** abre la app de Mercado Pago de la cuenta que recibe, antes y después del pago.
+- Si se cancela o se rechaza, el sistema lo dice y el pago sigue pendiente.
+- *"El token de Mercado Pago no está en la página: lo guarda un servidor (Vercel). La página nunca marca un pago como pagado sin confirmarlo con Mercado Pago."*
 
 ### Cierre: lo que viene
-HU-09 (pagos que se repiten solos) y HU-10 (avisos) quedan en el Product Backlog, junto con conectar HU-08 a la cuenta real de Mercado Pago.
+HU-09 (pagos que se repiten solos) y HU-10 (avisos) quedan en el Product Backlog.
 Luego presenta `COSTO_Y_DURACION.md`: **MVP en 1 semana por S/ 2,400.**
 
 ---
@@ -134,6 +134,6 @@ Cada pago se ve así:
 - **¿El gerente lo puede ver desde su celular?** Respuesta:
   *"En este MVP se usa en la computadora del negocio; la Etapa 2 lo pasa a la nube."*
   (Los datos se guardan en el navegador donde se usa. La Etapa 2 del documento de costos cubre esto: 1 semana, S/ 2,400.)
-- **¿El pago con Mercado Pago es real?** Está en **modo de prueba**: funciona completo dentro del sistema (saldo antes/después, aprobado, rechazado, comprobante) pero no mueve dinero. Para cobrar de verdad se necesita la cuenta del negocio en Mercado Pago Developers y un servidor que guarde las credenciales en secreto; eso es la Etapa 3.
+- **¿El pago con Mercado Pago es real?** Sí: usa el Checkout Pro de Mercado Pago con credenciales de producción y mueve dinero real. El sistema consulta cada pago a Mercado Pago antes de marcarlo como pagado.
 - **¿Qué pasa si suben un voucher muy pesado?** Las fotos se achican automáticamente antes de guardarse. Los PDF tienen un límite de 1 MB.
 - **¿Cómo trabajaron con Scrum?** Un sprint de 1 semana, 7 historias priorizadas por el cliente; cada historia tiene su commit en GitHub.

@@ -77,17 +77,17 @@ Todos se probaron en el sistema publicado el 19/10/2026.
 | 3 | Mes sin pagos: "No hay pagos registrados en este mes" | Ir a diciembre | ✅ |
 | 4 | Siempre se ve el mes y año consultado (ej. Octubre 2026) | Título central | ✅ |
 
-## HU-08 · Pagar con Mercado Pago (modo de prueba) — agregada en el Sprint Review
+## HU-08 · Pagar con Mercado Pago (pago real) — agregada en el Sprint Review
 
 *Como asistente, quiero pagar desde el sistema con Mercado Pago, para no tener que ir al banco o a un agente.*
 
 | # | Criterio | Cómo se muestra | Estado |
 |---|----------|-----------------|--------|
 | 1 | Cada pago pendiente o vencido tiene el botón "Pagar con Mercado Pago" (solo la asistente) | Botón celeste en cada fila sin pagar | ✅ |
-| 2 | Antes de pagar se ve a quién, cuánto y el saldo de la cuenta del negocio | Ventana de Mercado Pago | ✅ |
-| 3 | Al aprobarse se muestra el saldo antes y después, y el N° de operación | Pantalla *¡Pago aprobado!* | ✅ |
-| 4 | El pago queda "Pagado" con medio Mercado Pago y su comprobante como voucher | Fila: *Pagado el … · Mercado Pago* → **Ver comprobante** | ✅ |
-| 5 | Si se rechaza (tarjeta OTHE o saldo insuficiente) se explica el motivo y el pago sigue pendiente | Pantalla *Pago rechazado* + **Intentar de nuevo** | ✅ |
+| 2 | Antes de ir a pagar se ve a quién y cuánto | Ventana de confirmación | ✅ |
+| 3 | El botón lleva al checkout real de Mercado Pago (tarjeta, Yape o dinero en cuenta) | **Ir a pagar** → mercadopago.com.pe | ✅ |
+| 4 | Al volver, si Mercado Pago confirma el pago, queda "Pagado" con N° de operación y comprobante | Pantalla *¡Pago aprobado!* → **Ver comprobante** | ✅ |
+| 5 | Si se cancela o se rechaza, se explica el motivo y el pago sigue pendiente | Pantalla *Pago no realizado* + **Intentar de nuevo** | ✅ |
 
 **Resultado: 41 de 41 criterios cumplidos** (36 del MVP + 5 de HU-08).
 
