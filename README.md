@@ -14,6 +14,7 @@ Proyecto del curso **Agile Development — UPAO**, trabajado con Scrum.
 | Gerente (supervisa) | `gerente` | `gerente123` |
 
 La primera vez que se abre, el sistema carga pagos de ejemplo del mes actual y del anterior.
+Para empezar desde cero, la asistente usa el botón **Borrar datos** (arriba a la derecha): pide confirmación y deja el sistema vacío.
 Para volver a cargarlos, abre https://farashift.github.io/control-pagos/#reiniciar con la sesión de la asistente
 (no hay botón en pantalla, para que nadie lo toque por accidente; con la sesión del gerente no hace nada).
 

@@ -215,7 +215,17 @@ input:focus, select:focus {
   color: var(--primario-oscuro);
   background: var(--primario-suave);
 }
-#btn-salir { padding: .5rem .9rem; }
+#btn-salir { padding: .5rem .9rem; white-space: nowrap; }
+.borrar-datos { display: inline-flex; align-items: center; gap: .4rem; padding: .5rem .8rem; color: var(--mal); border-color: #f6cfd6; background: #fff; }
+.borrar-datos:hover { background: var(--mal-fondo); border-color: #f0b3bf; }
+.borrar-datos::before {
+  content: "";
+  width: .95rem;
+  height: .95rem;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3'/%3E%3C/svg%3E") center / contain no-repeat;
+}
 
 .contenido { max-width: 1140px; margin: 0 auto; padding: 1.6rem 16px 3rem; }
 
@@ -557,6 +567,9 @@ input[type="file"] { padding: .55rem; background: #f8f9fc; border-style: dashed;
   .fila-2 { grid-template-columns: 1fr; gap: 0; }
   .marca .logo-texto { display: none; }
   .usuario .rol { display: none; }
+  .borrar-datos .texto-boton { display: none; }  /* en celular solo el ícono */
+  .usuario b { display: none; }  /* queda el círculo con la inicial */
+  .barra { gap: .6rem; }
   .encabezado { align-items: stretch; }
   .saludo h1 { font-size: 1.3rem; }
   .mes-nav { width: 100%; justify-content: space-between; flex-wrap: wrap; border-radius: 16px; }

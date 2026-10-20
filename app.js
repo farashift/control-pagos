@@ -754,6 +754,26 @@ async function reiniciarDemo() {
   aviso('Datos de demostración cargados');
 }
 
+// Deja el sistema vacío para registrar los pagos desde cero (solo la asistente, con confirmación)
+async function borrarTodosLosDatos() {
+  if (usuarioActual()?.rol !== 'asistente') return;
+  const cantidad = leerPagos().length;
+  if (cantidad === 0) {
+    aviso('No hay pagos registrados para borrar');
+    return;
+  }
+  const ok = await confirmar(
+    '¿Borrar todos los datos?',
+    `Se eliminarán los ${cantidad} pagos registrados de todos los meses, con sus vouchers. `
+      + 'El sistema quedará vacío para registrar los pagos desde cero. Esta acción no se puede deshacer.',
+    'Sí, borrar todo',
+  );
+  if (!ok) return;
+  guardarPagos([]);
+  irAlMesActual();
+  aviso('Datos borrados: el sistema está vacío');
+}
+
 // La primera vez que se abre el sistema se cargan pagos de ejemplo
 if (localStorage.getItem(CLAVE_PAGOS) === null) {
   guardarPagos(crearDatosDemo());
@@ -1003,6 +1023,7 @@ $('#mes-anterior').addEventListener('click', () => moverMes(-1));
 $('#mes-siguiente').addEventListener('click', () => moverMes(1));
 $('#mes-actual').addEventListener('click', irAlMesActual);
 window.addEventListener('hashchange', revisarReinicio);
+$('#btn-borrar-datos').addEventListener('click', borrarTodosLosDatos);
 
 // Si la asistente registra algo en otra pestaña, esta pantalla se actualiza sola
 // (la sesión se guarda por pestaña, así se puede tener al gerente y a la asistente abiertos a la vez)
