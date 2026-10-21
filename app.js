@@ -121,20 +121,14 @@ async function sincronizarNube() {
     if (datos.sinCambios || enviosEnCurso > 0) return;
     versionNube = datos.version;
 
-    if (!datos.inicializado) {
-      // Primera vez que se usa la nube: se suben los pagos de ejemplo
-      const demo = crearDatosDemo();
-      localStorage.setItem(CLAVE_PAGOS, JSON.stringify(demo));
-      enviarANube({ guardar: demo, borrar: [] });
-    } else {
-      localStorage.setItem(CLAVE_PAGOS, JSON.stringify(datos.pagos));
-    }
+    // El sistema arranca vacío: solo muestra lo que está registrado en la nube
+    localStorage.setItem(CLAVE_PAGOS, JSON.stringify(datos.pagos || []));
     revisarCambios();
   } catch {
     estadoNube(false);
-    // Sin nube: el sistema sigue funcionando con los datos del navegador
+    // Sin nube: el sistema sigue funcionando con los datos del navegador (vacío si es la primera vez)
     if (localStorage.getItem(CLAVE_PAGOS) === null) {
-      localStorage.setItem(CLAVE_PAGOS, JSON.stringify(crearDatosDemo()));
+      localStorage.setItem(CLAVE_PAGOS, '[]');
       revisarCambios();
     }
   }
@@ -1908,7 +1902,6 @@ $('#mes-anterior').addEventListener('click', () => moverMes(-1));
 $('#mes-siguiente').addEventListener('click', () => moverMes(1));
 $('#mes-actual').addEventListener('click', irAlMesActual);
 window.addEventListener('hashchange', revisarReinicio);
-$('#btn-borrar-datos').addEventListener('click', borrarTodosLosDatos);
 
 // Si la asistente registra algo en otra pestaña, esta pantalla se actualiza sola
 // (la sesión se guarda por pestaña, así se puede tener al gerente y a la asistente abiertos a la vez)
