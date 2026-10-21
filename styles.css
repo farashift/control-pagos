@@ -667,6 +667,35 @@ input[type="file"] { padding: .55rem; background: #f8f9fc; border-style: dashed;
   .tabla-efectivo td, .tabla-efectivo th { padding: .6rem .35rem; font-size: .82rem; }
 }
 
+
+/* ================== REVISIÓN DEL CLIENTE ================== */
+.campo-clave { position: relative; display: block; }
+.campo-clave input { padding-right: 4.5rem; }
+.ver-clave { position: absolute; right: .4rem; top: 50%; transform: translateY(-50%); margin-top: .17rem; font: inherit; font-size: .78rem; font-weight: 700;
+  color: var(--primario); background: var(--primario-suave); border: 0; border-radius: 7px; padding: .3rem .55rem; cursor: pointer; }
+.alerta-monto { display: block; margin-top: .2rem; font-size: .72rem; font-weight: 700; color: var(--alerta); background: var(--alerta-fondo);
+  border-radius: 6px; padding: .1rem .4rem; white-space: nowrap; }
+.btn.descargar { display: inline-flex; align-items: center; gap: .4rem; }
+.btn.descargar::before { content: ""; width: 1rem; height: 1rem; background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 4v11M7 10l5 5 5-5M5 20h14'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 4v11M7 10l5 5 5-5M5 20h14'/%3E%3C/svg%3E") center / contain no-repeat; }
+.historial-lista { list-style: none; padding: 0; margin: .8rem 0 0; display: grid; gap: .1rem; max-height: 55vh; overflow: auto; }
+.historial-lista li { padding: .65rem .8rem; border-left: 3px solid var(--primario); background: #f8f9fc; border-radius: 0 10px 10px 0; }
+.historial-lista .sub { font-size: .8rem; }
+@media (max-width: 760px) {
+  #tabla-pagos td.num .alerta-monto { display: inline-block; margin: 0 0 0 .4rem; }
+}
+@media (max-width: 560px) {
+  .pestanas { display: grid; grid-template-columns: repeat(4, 1fr); overflow: visible; width: 100%; }
+  .pestana { padding: .55rem .2rem; font-size: .8rem; }
+  .efectivo-botones .btn { flex: 1 1 100%; }
+  .tabla-efectivo th:nth-child(2), .tabla-efectivo td:nth-child(2) { display: none; }
+  .tabla-efectivo td .btn.enlace { font-size: 0; padding: .35rem; }
+  .tabla-efectivo td .btn.enlace::before { width: 1rem; height: 1rem; }
+  .tabla-efectivo td.num { white-space: nowrap; }
+  .lista-cabecera .descargar { order: 3; }
+}
+
 /* ================== CELULAR ================== */
 @media (max-width: 900px) {
   .login { grid-template-columns: 1fr; }

@@ -223,7 +223,13 @@ function iniciarSesion(evento) {
   const clave = $('#login-clave').value;
   const encontrado = USUARIOS.find((u) => u.usuario === usuario && u.clave === clave);
 
+  if (!usuario || !clave) {
+    $('#login-error').textContent = 'Ingresa tu usuario y contraseña.';
+    $('#login-error').hidden = false;
+    return;
+  }
   if (!encontrado) {
+    $('#login-error').textContent = 'Usuario o contraseña incorrectos';
     $('#login-error').hidden = false;
     return;
   }
@@ -391,19 +397,67 @@ function validarPago(form) {
   return { datos, errores };
 }
 
-function guardarPago(evento) {
+// Historial: cada cambio de un pago queda anotado con fecha, usuario y detalle
+function anotar(pago, accion, detalle = '') {
+  pago.historial = [...(pago.historial || []), { fecha: new Date().toISOString(), usuario: usuarioActual() ? usuarioActual().nombre : '—', accion, detalle }];
+}
+
+// Pago igual ya registrado (mismo beneficiario, monto y vencimiento)
+function buscarDuplicado(datos, idEditando) {
+  const nombre = datos.beneficiario.trim().toLowerCase();
+  return leerPagos().find((p) => p.id !== idEditando && p.beneficiario.trim().toLowerCase() === nombre
+    && Math.round(p.monto * 100) === Math.round(datos.monto * 100) && p.vencimiento === datos.vencimiento);
+}
+
+// Compara el monto con el promedio de los últimos 3 pagos al mismo beneficiario (ej. luz S/ 100 → S/ 150)
+function revisarMontoInusual(datos, idEditando) {
+  const nombre = datos.beneficiario.trim().toLowerCase();
+  const anteriores = leerPagos()
+    .filter((p) => p.id !== idEditando && !p.prestamoId && p.beneficiario.trim().toLowerCase() === nombre && p.vencimiento < datos.vencimiento)
+    .sort((a, b) => b.vencimiento.localeCompare(a.vencimiento))
+    .slice(0, 3);
+  if (anteriores.length < 2) return null;
+  const promedio = Math.round(anteriores.reduce((s, p) => s + p.monto, 0) / anteriores.length * 100) / 100;
+  const porcentaje = Math.round(((datos.monto - promedio) / promedio) * 100);
+  return Math.abs(porcentaje) >= 30 ? { promedio, porcentaje, cantidad: anteriores.length } : null;
+}
+
+const CAMPOS_PAGO = { beneficiario: 'Beneficiario', concepto: 'Concepto', tipo: 'Tipo', monto: 'Monto', vencimiento: 'Vencimiento' };
+function describirValor(campo, valor) {
+  return campo === 'monto' ? soles(valor) : campo === 'vencimiento' ? fechaCorta(valor) : valor;
+}
+
+async function guardarPago(evento) {
   evento.preventDefault();
   const form = evento.target;
   const { datos, errores } = validarPago(form);
   mostrarErrores(form, errores);
   if (Object.keys(errores).length) return; // no se guarda si hay algo que corregir
 
-  const pagos = leerPagos();
   const editando = form.dataset.id;
+  const duplicado = buscarDuplicado(datos, editando);
+  if (duplicado && !(await confirmar('¿Registrar un pago repetido?',
+    `Ya existe un pago a ${duplicado.beneficiario} por ${soles(duplicado.monto)} que vence el ${fechaCorta(duplicado.vencimiento)} (${estadoDe(duplicado)}). ¿Es otro pago distinto?`,
+    'Sí, es otro pago'))) return;
+
+  const inusual = revisarMontoInusual(datos, editando);
+  if (inusual && !(await confirmar('Monto inusual: ¿es correcto?',
+    `Este pago a ${datos.beneficiario} es ${soles(datos.monto)}, un ${Math.abs(inusual.porcentaje)}% ${inusual.porcentaje > 0 ? 'más' : 'menos'} que su promedio de los últimos ${inusual.cantidad} pagos (${soles(inusual.promedio)}). Quedará marcado para que el gerente lo revise.`,
+    'Sí, el monto es correcto'))) return;
+
+  const pagos = leerPagos();
   if (editando) {
-    Object.assign(pagos.find((p) => p.id === editando), datos); // HU-06: corrige el mismo pago
+    const pago = pagos.find((p) => p.id === editando);
+    const cambios = Object.keys(CAMPOS_PAGO).filter((c) => String(pago[c]) !== String(datos[c]))
+      .map((c) => `${CAMPOS_PAGO[c]}: ${describirValor(c, pago[c])} → ${describirValor(c, datos[c])}`);
+    Object.assign(pago, datos); // HU-06: corrige el mismo pago
+    if (inusual) pago.alertaMonto = inusual; else delete pago.alertaMonto;
+    if (cambios.length) anotar(pago, 'Editó el pago', cambios.join(' · '));
   } else {
-    pagos.push({ id: nuevoId(), ...datos, pagado: false }); // nace como "Pendiente"
+    const nuevo = { id: nuevoId(), ...datos, pagado: false }; // nace como "Pendiente"
+    if (inusual) nuevo.alertaMonto = inusual;
+    anotar(nuevo, 'Registró el pago', `${soles(datos.monto)} · vence el ${fechaCorta(datos.vencimiento)}`);
+    pagos.push(nuevo);
   }
   if (!guardarPagos(pagos)) return;
 
@@ -479,7 +533,7 @@ function filaPago(pago) {
       <td data-etiqueta="Beneficiario"><span class="benef" data-inicial="${seguro(pago.beneficiario.charAt(0).toUpperCase())}">${seguro(pago.beneficiario)}</span></td>
       <td data-etiqueta="Concepto">${seguro(pago.concepto)}</td>
       <td data-etiqueta="Tipo"><span class="chip-tipo t-${pago.tipo === 'Préstamo' ? 'prestamo' : seguro(pago.tipo.toLowerCase())}">${seguro(pago.tipo)}</span></td>
-      <td data-etiqueta="Monto" class="num">${soles(pago.monto)}</td>
+      <td data-etiqueta="Monto" class="num">${soles(pago.monto)}${pago.alertaMonto ? `<small class="alerta-monto" title="Promedio anterior ${soles(pago.alertaMonto.promedio)}">⚠ ${pago.alertaMonto.porcentaje > 0 ? '+' : ''}${pago.alertaMonto.porcentaje}% vs. promedio</small>` : ''}</td>
       <td data-etiqueta="Vencimiento">${fechaCorta(pago.vencimiento)}</td>
       <td data-etiqueta="Estado"><div><span class="estado ${estado.toLowerCase()}">${estado}</span>${detalle}</div></td>
       <td class="acciones"><div class="acciones-caja">${accionesDe(pago, estado)}</div></td>
@@ -505,6 +559,7 @@ function accionesDe(pago, estado) {
     secundarias.push(boton('editar', pago.id, 'Editar', 'enlace'));
     secundarias.push(boton('eliminar', pago.id, 'Eliminar', 'enlace rojo'));
   }
+  if ((pago.historial || []).length) secundarias.push(boton('historial', pago.id, 'Historial', 'enlace'));
   return `<div class="acciones-principales">${principales.join('')}</div>`
     + (secundarias.length ? `<div class="acciones-secundarias">${secundarias.join('')}</div>` : '');
 }
@@ -597,6 +652,9 @@ async function confirmarVoucher(evento) {
     pago.pagado = true;
     pago.fechaPago = campos.fechaPago.value;
     pago.medio = campos.medio.value;
+    anotar(pago, 'Marcó como pagado', `${fechaCorta(pago.fechaPago)} · ${pago.medio} · voucher ${voucher.nombre}`);
+  } else {
+    anotar(pago, 'Cambió el voucher', `Nuevo archivo: ${voucher.nombre}`);
   }
   pago.voucher = voucher;
   if (!guardarPagos(pagos)) return;
@@ -761,6 +819,7 @@ async function volverAPendiente(id) {
   if (!ok) return;
   const pagos = leerPagos();
   const elegido = pagos.find((p) => p.id === id);
+  anotar(elegido, 'Volvió a Pendiente', `Antes: pagado el ${fechaCorta(elegido.fechaPago)} · ${elegido.medio}`);
   elegido.pagado = false;
   delete elegido.fechaPago;
   delete elegido.medio;
@@ -779,7 +838,48 @@ const ACCIONES = {
   cambiarVoucher: (id) => abrirVentanaVoucher(id, 'reemplazar'),
   revertir: volverAPendiente,
   pagarMP: abrirMercadoPago,
+  historial: verHistorial,
 };
+
+// Descarga los pagos del mes como CSV (se abre en Excel)
+function descargarMes() {
+  const pagos = pagosDelMes();
+  if (!pagos.length) {
+    aviso('No hay pagos en este mes para descargar');
+    return;
+  }
+  const celda = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const filas = [['Beneficiario', 'Concepto', 'Tipo', 'Monto (S/)', 'Vencimiento', 'Estado', 'Fecha de pago', 'Medio', 'Observación']];
+  for (const p of pagos) {
+    filas.push([p.beneficiario, p.concepto, p.tipo, p.monto.toFixed(2), fechaCorta(p.vencimiento), estadoDe(p),
+      p.fechaPago ? fechaCorta(p.fechaPago) : '', p.medio || '',
+      p.alertaMonto ? `Monto inusual ${p.alertaMonto.porcentaje > 0 ? '+' : ''}${p.alertaMonto.porcentaje}% vs. promedio` : '']);
+  }
+  const total = pagos.reduce((s, p) => s + Math.round(p.monto * 100), 0) / 100;
+  filas.push([], ['Total del mes', '', '', total.toFixed(2)]);
+  const csv = '﻿' + filas.map((f) => f.map(celda).join(',')).join('\r\n');
+  const enlace = document.createElement('a');
+  enlace.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  enlace.download = `pagos-${MESES[vista.mes].toLowerCase()}-${vista.anio}.csv`;
+  document.body.appendChild(enlace);
+  enlace.click();
+  enlace.remove();
+  aviso('Descargado: ábrelo con Excel');
+}
+
+function verHistorial(id) {
+  const pago = buscarPago(id);
+  if (!pago) return;
+  $('#historial-titulo').textContent = `Historial — ${pago.beneficiario}`;
+  $('#historial-detalle').textContent = `${pago.concepto} · ${soles(pago.monto)} · vence el ${fechaCorta(pago.vencimiento)}`;
+  $('#historial-lista').innerHTML = (pago.historial || []).slice().reverse().map((h) => {
+    const f = new Date(h.fecha);
+
+    return `<li><b>${seguro(h.accion)}</b> <span class="sub">· ${seguro(h.usuario)} · ${f.toLocaleDateString('es-PE')} ${f.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}</span>
+      ${h.detalle ? `<small class="detalle">${seguro(h.detalle)}</small>` : ''}</li>`;
+  }).join('');
+  $('#dlg-historial').showModal();
+}
 
 function cambiarFiltro(evento) {
   vista.filtro = evento.target.value;
@@ -1107,6 +1207,7 @@ async function procesarRetornoMP() {
       elegido.fechaPago = (mp.fecha || '').slice(0, 10) || hoyISO();
       elegido.medio = 'Mercado Pago';
       elegido.operacionMP = mp.operacion;
+      anotar(elegido, 'Pagó con Mercado Pago', `N° de operación ${mp.operacion}`);
       elegido.voucher = comprobanteMP(elegido, mp);
       guardarPagos(pagos);
       render();
@@ -1328,7 +1429,7 @@ function renderPrestamos() {
     ['total', 'Deuda pendiente (capital)', soles(activos.reduce((s, x) => s + x.d.saldoCapital, 0)), `${activos.length} ${activos.length === 1 ? 'préstamo activo' : 'préstamos activos'}`],
     ['pendiente', 'Cuotas de este mes', soles(cuotasMes.reduce((s, f) => s + f.cuota, 0)), `${cuotasMes.length} ${cuotasMes.length === 1 ? 'cuota' : 'cuotas'} · ${cuotasMes.filter((f) => f.estado === 'Pagado').length} pagadas`],
     ['pagado', 'Total pagado en préstamos', soles(detalles.reduce((s, x) => s + x.d.pagado, 0)), `${detalles.reduce((s, x) => s + x.d.pagadas, 0)} cuotas pagadas`],
-    ['vencido', 'Próxima cuota', proximas[0] ? soles(proximas[0].cuota) : '—', proximas[0] ? `${proximas[0].entidad} · ${fechaCorta(proximas[0].vencimiento)}` : 'Sin cuotas pendientes'],
+    [proximas[0] && proximas[0].vencimiento < hoyISO() ? 'vencido' : 'pendiente', 'Próxima cuota', proximas[0] ? soles(proximas[0].cuota) : '—', proximas[0] ? `${proximas[0].entidad} · ${fechaCorta(proximas[0].vencimiento)}` : 'Sin cuotas pendientes'],
   ].map(([clase, titulo, valor, pie]) => `
       <div class="kpi ${clase} kpi-fijo"><span>${titulo}</span><strong>${valor}</strong><small>${seguro(pie)}</small></div>`).join('');
 
@@ -1788,6 +1889,13 @@ document.querySelectorAll('[data-mover-caja]').forEach((b) => b.addEventListener
 // ================== ARRANQUE ==================
 
 $('#form-login').addEventListener('submit', iniciarSesion);
+$('#btn-descargar').addEventListener('click', descargarMes);
+$('#ver-clave').addEventListener('click', () => {
+  const campo = $('#login-clave');
+  const mostrar = campo.type === 'password';
+  campo.type = mostrar ? 'text' : 'password';
+  $('#ver-clave').textContent = mostrar ? 'Ocultar' : 'Ver';
+});
 $('#btn-salir').addEventListener('click', cerrarSesion);
 $('#btn-nuevo').addEventListener('click', () => abrirFormularioPago());
 $('#form-pago').addEventListener('submit', guardarPago);
