@@ -276,6 +276,11 @@ function abrirFormularioPago(pago) {
   form.dataset.id = pago ? pago.id : '';
   $('#pago-titulo').textContent = pago ? 'Corregir pago' : 'Registrar pago';
   $('#pago-nota').hidden = !(pago && pago.pagado);
+  // "Préstamo" no se elige al registrar: los préstamos se crean en su sección.
+  // Solo se muestra al corregir una cuota de préstamo que ya existe.
+  const esCuota = !!(pago && pago.tipo === 'Préstamo');
+  $('#opcion-prestamo').hidden = !esCuota;
+  $('#opcion-prestamo').disabled = !esCuota;
   if (pago) {
     for (const campo of ['beneficiario', 'concepto', 'tipo', 'vencimiento']) {
       form.elements[campo].value = pago[campo];
@@ -312,6 +317,9 @@ function validarPago(form) {
   if (!datos.beneficiario) errores.beneficiario = 'Indica a quién se le paga.';
   if (!datos.concepto) errores.concepto = 'Indica el concepto del pago.';
   if (!TIPOS.includes(datos.tipo)) errores.tipo = 'Elige el tipo de pago.';
+  else if (datos.tipo === 'Préstamo' && !form.dataset.id) {
+    errores.tipo = 'Los préstamos se registran en la sección Préstamos.';
+  }
 
   // Monto: número positivo, mayor que 0, con máximo 2 decimales (ej. 150.50)
   if (!datos.monto) {
