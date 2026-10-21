@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
-  <link rel="stylesheet" href="styles.css?v=22">
+  <link rel="stylesheet" href="styles.css?v=24">
 </head>
 <body>
   <noscript><p style="padding:16px">Activa JavaScript para usar el sistema.</p></noscript>
@@ -61,6 +61,7 @@
         <button class="pestana activa" data-vista="pagos">Pagos</button>
         <button class="pestana" data-vista="calendario">Calendario</button>
         <button class="pestana" data-vista="prestamos">Préstamos</button>
+        <button class="pestana" data-vista="efectivo">Efectivo</button>
       </nav>
 
       <div id="vista-pagos">
@@ -147,6 +148,39 @@
           <h3 id="dia-titulo"></h3>
           <p id="dia-resumen" class="sub"></p>
           <div id="dia-pagos" class="dia-pagos"></div>
+        </section>
+      </div>
+
+      <!-- EFECTIVO: caja chica -->
+      <div id="vista-efectivo" hidden>
+        <div class="encabezado">
+          <div class="saludo">
+            <h1>Efectivo</h1>
+            <p>Control de la caja chica: entradas, salidas y arqueo.</p>
+          </div>
+          <div class="mes-nav">
+            <button class="btn" data-mover-caja="-1" aria-label="Mes anterior">‹ Anterior</button>
+            <h2 id="efectivo-titulo"></h2>
+            <button class="btn" data-mover-caja="1" aria-label="Mes siguiente">Siguiente ›</button>
+          </div>
+        </div>
+        <section class="resumen"><div id="efectivo-kpis" class="kpis"></div></section>
+        <div class="efectivo-botones solo-asistente">
+          <button id="btn-ingreso" class="btn ok">+ Ingreso de efectivo</button>
+          <button id="btn-egreso" class="btn">− Gasto en efectivo</button>
+          <button id="btn-arqueo" class="btn suave">Hacer arqueo</button>
+        </div>
+        <section class="tarjeta">
+          <div class="lista-cabecera"><h3>Movimientos del mes</h3></div>
+          <table id="tabla-efectivo" class="tabla tabla-efectivo">
+            <thead><tr><th>Fecha</th><th>Tipo</th><th>Motivo</th><th class="num">Monto</th><th class="num">Saldo</th><th></th></tr></thead>
+            <tbody></tbody>
+          </table>
+          <p id="efectivo-vacio" class="vacio" hidden>No hay movimientos de efectivo en este mes</p>
+        </section>
+        <section class="tarjeta arqueos">
+          <h3>Últimos arqueos</h3>
+          <div id="lista-arqueos"></div>
         </section>
       </div>
 
@@ -404,8 +438,60 @@
     </div>
   </dialog>
 
+  <!-- EFECTIVO: ingreso o gasto -->
+  <dialog id="dlg-movimiento">
+    <form id="form-movimiento" novalidate>
+      <h3 id="movimiento-titulo">Registrar movimiento</h3>
+      <p id="movimiento-ayuda" class="sub"></p>
+      <div class="fila-2">
+        <div>
+          <label>Monto (S/)
+            <input name="monto" inputmode="decimal" maxlength="12" placeholder="100.00">
+          </label>
+          <small class="campo-error" data-para="monto"></small>
+        </div>
+        <div>
+          <label>Fecha
+            <input name="fecha" type="date">
+          </label>
+          <small class="campo-error" data-para="fecha"></small>
+        </div>
+      </div>
+      <label>Motivo
+        <input name="concepto" maxlength="80" placeholder="Ej. Retiro del banco">
+      </label>
+      <small class="campo-error" data-para="concepto"></small>
+      <div class="dialogo-botones">
+        <button type="button" class="btn" data-cerrar>Cancelar</button>
+        <button type="submit" class="btn primario">Guardar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- EFECTIVO: arqueo de caja -->
+  <dialog id="dlg-arqueo">
+    <form id="form-arqueo" novalidate>
+      <h3>Arqueo de caja</h3>
+      <p class="sub">Cuenta los billetes y monedas de la caja y escribe el total.</p>
+      <div class="mp-saldo"><span>Saldo según el sistema</span><strong id="arqueo-sistema"></strong></div>
+      <label>Dinero contado en caja (S/)
+        <input name="contado" inputmode="decimal" maxlength="12" placeholder="0.00">
+      </label>
+      <small class="campo-error" data-para="contado"></small>
+      <p id="arqueo-resultado" class="nota arqueo-previa"></p>
+      <label>Observación (obligatoria si no cuadra)
+        <input name="nota" maxlength="120" placeholder="Ej. Faltan S/ 5 de un vuelto">
+      </label>
+      <small class="campo-error" data-para="nota"></small>
+      <div class="dialogo-botones">
+        <button type="button" class="btn" data-cerrar>Cancelar</button>
+        <button type="submit" class="btn primario">Guardar arqueo</button>
+      </div>
+    </form>
+  </dialog>
+
   <div id="aviso" class="aviso" hidden></div>
 
-  <script src="app.js?v=23"></script>
+  <script src="app.js?v=24"></script>
 </body>
 </html>

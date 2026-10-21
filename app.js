@@ -25,7 +25,12 @@ function leerTodo() {
 }
 
 function leerPagos() {
-  return leerTodo().filter((r) => !r.esPrestamo);
+  return leerTodo().filter((r) => !r.esPrestamo && !r.esCaja);
+}
+
+// Movimientos de caja (ingresos, gastos en efectivo y arqueos) llevan esCaja: true
+function leerCaja() {
+  return leerTodo().filter((r) => r.esCaja);
 }
 
 function leerPrestamos() {
@@ -33,11 +38,15 @@ function leerPrestamos() {
 }
 
 function guardarPagos(pagos) {
-  return guardarRegistros([...pagos, ...leerPrestamos()]);
+  return guardarRegistros([...pagos, ...leerPrestamos(), ...leerCaja()]);
 }
 
 function guardarPrestamos(prestamos) {
-  return guardarRegistros([...leerPagos(), ...prestamos]);
+  return guardarRegistros([...leerPagos(), ...prestamos, ...leerCaja()]);
+}
+
+function guardarCaja(movimientos) {
+  return guardarRegistros([...leerPagos(), ...leerPrestamos(), ...movimientos]);
 }
 
 // Guarda en el navegador y manda a la nube solo lo que cambió (registros nuevos/editados y borrados)
@@ -274,6 +283,7 @@ function render() {
   renderLista();
   renderPrestamos();
   renderCalendario();
+  renderEfectivo();
 }
 
 // ================== HU-02: REGISTRAR UN PAGO PENDIENTE ==================
@@ -550,6 +560,13 @@ async function confirmarVoucher(evento) {
     else if (fecha > hoyISO()) errores.fechaPago = 'La fecha de pago no puede ser futura.';
     else if (fecha < minimo) errores.fechaPago = `La fecha de pago no puede ser anterior al ${fechaCorta(minimo)}.`;
     if (!MEDIOS_PAGO.includes(campos.medio.value)) errores.medio = 'Elige el medio de pago.';
+    else if (campos.medio.value === 'Efectivo') {
+      const pagoActual = buscarPago(form.dataset.id);
+      const saldo = saldoCaja();
+      if (pagoActual && Math.round(pagoActual.monto * 100) > Math.round(saldo * 100)) {
+        errores.medio = `No alcanza el efectivo en caja (saldo ${soles(saldo)}). Registra un ingreso en la sección Efectivo o elige otro medio.`;
+      }
+    }
   }
   // Sin voucher no se puede marcar como pagado
   const problema = archivo ? problemaDelVoucher(archivo) : 'Adjunta el voucher (foto o PDF).';
@@ -920,6 +937,10 @@ function crearDatosDemo() {
     pago(0, 22, 'SUNAT', 'IGV mensual', 'Impuesto', 1850.00),
     pago(0, 25, 'Distribuidora Norte SAC', 'Factura F001-2310', 'Proveedor', 3200.00),
     ...prestamoDemo(),
+    // Caja chica
+    { id: nuevoId(), esCaja: true, clase: 'ingreso', monto: 1500, fecha: fechaDemo(-1, 1), concepto: 'Fondo inicial de caja chica', registradoPor: 'Asistente' },
+    { id: nuevoId(), esCaja: true, clase: 'ingreso', monto: 500, fecha: fechaDemo(0, 2), concepto: 'Retiro del banco', registradoPor: 'Asistente' },
+    { id: nuevoId(), esCaja: true, clase: 'egreso', monto: 35, fecha: fechaDemo(0, 8), concepto: 'Movilidad para trámites', registradoPor: 'Asistente' },
   ];
 }
 
@@ -1288,6 +1309,7 @@ function cambiarPestana(nombre) {
   $('#vista-pagos').hidden = nombre !== 'pagos';
   $('#vista-prestamos').hidden = nombre !== 'prestamos';
   $('#vista-calendario').hidden = nombre !== 'calendario';
+  $('#vista-efectivo').hidden = nombre !== 'efectivo';
   document.querySelectorAll('.pestana').forEach((b) => b.classList.toggle('activa', b.dataset.vista === nombre));
   render();
 }
@@ -1445,7 +1467,7 @@ function guardarPrestamo(evento) {
 
   const prestamo = { id: nuevoId(), esPrestamo: true, ...datos, creado: hoyISO() };
   const cuotas = cuotasDePrestamo(prestamo);
-  if (!guardarRegistros([...leerPagos(), ...cuotas, ...leerPrestamos(), prestamo])) return;
+  if (!guardarRegistros([...leerPagos(), ...cuotas, ...leerPrestamos(), prestamo, ...leerCaja()])) return;
   $('#dlg-prestamo').close();
   render();
   aviso(`Préstamo registrado: se crearon ${cuotas.length} cuotas en los pagos`);
@@ -1462,7 +1484,7 @@ async function eliminarPrestamo(id) {
   );
   if (!ok) return;
   const pagos = leerPagos().filter((p) => !(p.prestamoId === id && !p.pagado));
-  guardarRegistros([...pagos, ...leerPrestamos().filter((p) => p.id !== id)]);
+  guardarRegistros([...pagos, ...leerPrestamos().filter((p) => p.id !== id), ...leerCaja()]);
   render();
   aviso('Préstamo eliminado');
 }
@@ -1565,6 +1587,203 @@ document.querySelectorAll('[data-mover]').forEach((b) => b.addEventListener('cli
   moverMes(Number(b.dataset.mover));
 }));
 $('#dia-pagos').addEventListener('click', clickEnTabla); // mismos botones que la lista de pagos
+
+// ================== EFECTIVO (CAJA CHICA) ==================
+// El saldo de caja se calcula: ingresos − gastos en efectivo − pagos marcados como pagados en "Efectivo".
+// El arqueo compara el dinero contado con el saldo del sistema y guarda la diferencia.
+
+// Todos los movimientos de efectivo (manuales y los pagos hechos en efectivo), del más antiguo al más nuevo
+function movimientosEfectivo() {
+  const manuales = leerCaja().filter((m) => m.clase === 'ingreso' || m.clase === 'egreso').map((m) => ({
+    id: m.id, fecha: m.fecha, clase: m.clase, monto: m.monto, concepto: m.concepto, origen: 'manual', por: m.registradoPor,
+  }));
+  const pagosEfectivo = leerPagos().filter((p) => p.pagado && p.medio === 'Efectivo').map((p) => ({
+    id: p.id, fecha: p.fechaPago, clase: 'egreso', monto: p.monto, concepto: `Pago a ${p.beneficiario} · ${p.concepto}`, origen: 'pago',
+  }));
+  return [...manuales, ...pagosEfectivo].sort((a, b) => a.fecha.localeCompare(b.fecha) || (a.clase === 'ingreso' ? -1 : 1));
+}
+
+function saldoCaja(hasta) {
+  return movimientosEfectivo()
+    .filter((m) => !hasta || m.fecha <= hasta)
+    .reduce((s, m) => s + (m.clase === 'ingreso' ? 1 : -1) * Math.round(m.monto * 100), 0) / 100;
+}
+
+function renderEfectivo() {
+  const prefijo = `${vista.anio}-${String(vista.mes + 1).padStart(2, '0')}`;
+  $('#efectivo-titulo').textContent = `${MESES[vista.mes]} ${vista.anio}`;
+  const todos = movimientosEfectivo();
+  let acumulado = 0;
+  const conSaldo = todos.map((m) => {
+    acumulado += (m.clase === 'ingreso' ? 1 : -1) * Math.round(m.monto * 100);
+    return { ...m, saldo: acumulado / 100 };
+  });
+  const delMes = conSaldo.filter((m) => m.fecha.startsWith(prefijo));
+  const suma = (lista) => lista.reduce((s, m) => s + Math.round(m.monto * 100), 0) / 100;
+  const ingresos = delMes.filter((m) => m.clase === 'ingreso');
+  const egresos = delMes.filter((m) => m.clase === 'egreso');
+  const arqueos = leerCaja().filter((m) => m.clase === 'arqueo').sort((a, b) => b.creado.localeCompare(a.creado));
+  const ultimo = arqueos[0];
+
+  $('#efectivo-kpis').innerHTML = [
+    ['total', 'Saldo en caja (hoy)', soles(saldoCaja(hoyISO())), 'Según los movimientos registrados'],
+    ['pagado', 'Ingresos del mes', soles(suma(ingresos)), `${ingresos.length} ${ingresos.length === 1 ? 'ingreso' : 'ingresos'}`],
+    ['vencido', 'Salidas del mes', soles(suma(egresos)), `${egresos.length} ${egresos.length === 1 ? 'salida' : 'salidas'} (gastos y pagos en efectivo)`],
+    ['pendiente', 'Último arqueo', ultimo ? (ultimo.diferencia === 0 ? 'Cuadra' : `${ultimo.diferencia > 0 ? 'Sobran' : 'Faltan'} ${soles(Math.abs(ultimo.diferencia))}`) : '—',
+      ultimo ? `${fechaCorta(ultimo.fecha)} · contado ${soles(ultimo.contado)}` : 'Aún no se hizo un arqueo'],
+  ].map(([clase, titulo, valor, pie]) => `
+      <div class="kpi ${clase} kpi-fijo"><span>${titulo}</span><strong>${valor}</strong><small>${seguro(pie)}</small></div>`).join('');
+
+  const esAsistente = usuarioActual() && usuarioActual().rol === 'asistente';
+  $('#tabla-efectivo tbody').innerHTML = delMes.slice().reverse().map((m) => `
+      <tr>
+        <td>${fechaCorta(m.fecha)}</td>
+        <td><span class="estado ${m.clase === 'ingreso' ? 'pagado' : 'vencido'}">${m.clase === 'ingreso' ? 'Ingreso' : 'Salida'}</span></td>
+        <td>${seguro(m.concepto)}<small class="detalle">${m.origen === 'pago' ? 'Pago registrado como pagado en efectivo' : `Registrado por ${seguro(m.por || '—')}`}</small></td>
+        <td class="num ${m.clase === 'ingreso' ? 'monto-entra' : 'monto-sale'}">${m.clase === 'ingreso' ? '+' : '−'} ${soles(m.monto)}</td>
+        <td class="num">${soles(m.saldo)}</td>
+        <td class="acciones">${esAsistente && m.origen === 'manual' ? `<button class="btn chico con-icono enlace rojo" data-accion="eliminar" data-borrar-mov="${m.id}">Eliminar</button>` : ''}</td>
+      </tr>`).join('');
+  $('#tabla-efectivo').hidden = delMes.length === 0;
+  $('#efectivo-vacio').hidden = delMes.length > 0;
+
+  $('#lista-arqueos').innerHTML = arqueos.slice(0, 5).map((a) => `
+      <div class="arqueo">
+        <span>${fechaCorta(a.fecha)} · ${seguro(a.registradoPor || '')}</span>
+        <span>Sistema ${soles(a.sistema)} · Contado ${soles(a.contado)}</span>
+        <b class="${a.diferencia === 0 ? 'cuadra' : a.diferencia > 0 ? 'sobra' : 'falta'}">${a.diferencia === 0 ? 'Cuadra ✓' : `${a.diferencia > 0 ? 'Sobrante' : 'Faltante'} ${soles(Math.abs(a.diferencia))}`}</b>
+        ${a.nota ? `<small class="detalle">${seguro(a.nota)}</small>` : ''}
+      </div>`).join('') || '<p class="sub">Aún no se registró ningún arqueo.</p>';
+}
+
+function abrirMovimiento(clase) {
+  const form = $('#form-movimiento');
+  form.reset();
+  mostrarErrores(form, {});
+  form.dataset.clase = clase;
+  $('#movimiento-titulo').textContent = clase === 'ingreso' ? 'Registrar ingreso de efectivo' : 'Registrar gasto en efectivo';
+  $('#movimiento-ayuda').textContent = clase === 'ingreso'
+    ? 'Ej.: fondo de caja chica, retiro del banco, vuelto devuelto.'
+    : `Ej.: movilidad, útiles, compras menores. Saldo en caja: ${soles(saldoCaja(hoyISO()))}.`;
+  form.elements.fecha.value = hoyISO();
+  form.elements.fecha.max = hoyISO();
+  form.elements.fecha.min = sumarMeses(hoyISO(), -24);
+  $('#dlg-movimiento').showModal();
+  form.elements.monto.focus();
+}
+
+function guardarMovimiento(evento) {
+  evento.preventDefault();
+  const form = evento.target;
+  const clase = form.dataset.clase;
+  const datos = {
+    monto: normalizarMonto(form.elements.monto.value),
+    fecha: form.elements.fecha.value,
+    concepto: form.elements.concepto.value.trim(),
+  };
+  const errores = {};
+  if (!/^\d+(\.\d{1,2})?$/.test(datos.monto) || Number(datos.monto) <= 0) errores.monto = 'Monto mayor que 0, máximo 2 decimales.';
+  else if (Number(datos.monto) > 999999.99) errores.monto = 'El monto máximo en caja es S/ 999,999.99.';
+  const minimo = sumarMeses(hoyISO(), -24);
+  if (!datos.fecha) errores.fecha = 'Elige la fecha.';
+  else if (!fechaValida(datos.fecha)) errores.fecha = 'Esa fecha no existe. Revísala.';
+  else if (datos.fecha > hoyISO()) errores.fecha = 'No puede ser una fecha futura.';
+  else if (datos.fecha < minimo) errores.fecha = `No puede ser anterior al ${fechaCorta(minimo)}.`;
+  if (!datos.concepto) errores.concepto = 'Indica el motivo.';
+  else if (!textoValido(datos.concepto, 3)) errores.concepto = 'Escribe un motivo válido (al menos 3 caracteres).';
+  if (!errores.monto && !errores.fecha && clase === 'egreso') {
+    const saldo = saldoCaja(datos.fecha);
+    if (Math.round(Number(datos.monto) * 100) > Math.round(saldo * 100)) {
+      errores.monto = `No alcanza el efectivo: al ${fechaCorta(datos.fecha)} la caja tiene ${soles(saldo)}.`;
+    }
+  }
+  mostrarErrores(form, errores);
+  if (Object.keys(errores).length) return;
+
+  const movimiento = { id: nuevoId(), esCaja: true, clase, monto: Number(datos.monto), fecha: datos.fecha,
+    concepto: datos.concepto, registradoPor: usuarioActual().nombre, creado: new Date().toISOString() };
+  if (!guardarCaja([...leerCaja(), movimiento])) return;
+  $('#dlg-movimiento').close();
+  const [a, m] = datos.fecha.split('-').map(Number);
+  vista.anio = a;
+  vista.mes = m - 1;
+  render();
+  aviso(clase === 'ingreso' ? 'Ingreso registrado en caja' : 'Gasto en efectivo registrado');
+}
+
+function abrirArqueo() {
+  const form = $('#form-arqueo');
+  form.reset();
+  mostrarErrores(form, {});
+  $('#arqueo-sistema').textContent = soles(saldoCaja(hoyISO()));
+  $('#arqueo-resultado').textContent = '';
+  $('#dlg-arqueo').showModal();
+  form.elements.contado.focus();
+}
+
+function previaArqueo() {
+  const contado = normalizarMonto($('#form-arqueo').elements.contado.value);
+  const caja = $('#arqueo-resultado');
+  if (!/^\d+(\.\d{1,2})?$/.test(contado)) { caja.textContent = ''; caja.className = 'nota arqueo-previa'; return; }
+  const diferencia = (Math.round(Number(contado) * 100) - Math.round(saldoCaja(hoyISO()) * 100)) / 100;
+  caja.className = 'nota arqueo-previa ' + (diferencia === 0 ? 'cuadra' : diferencia > 0 ? 'sobra' : 'falta');
+  caja.textContent = diferencia === 0 ? '✓ La caja cuadra con el sistema.'
+    : `${diferencia > 0 ? 'Sobran' : 'Faltan'} ${soles(Math.abs(diferencia))} respecto al sistema.`;
+}
+
+function guardarArqueo(evento) {
+  evento.preventDefault();
+  const form = evento.target;
+  const contado = normalizarMonto(form.elements.contado.value);
+  const nota = form.elements.nota.value.trim();
+  const errores = {};
+  if (!/^\d+(\.\d{1,2})?$/.test(contado)) errores.contado = 'Ingresa el dinero contado (0 o más, máximo 2 decimales).';
+  else if (Number(contado) > 999999.99) errores.contado = 'El monto máximo es S/ 999,999.99.';
+  const sistema = saldoCaja(hoyISO());
+  const diferencia = errores.contado ? 0 : (Math.round(Number(contado) * 100) - Math.round(sistema * 100)) / 100;
+  if (!errores.contado && diferencia !== 0 && !textoValido(nota, 5)) {
+    errores.nota = 'Hay diferencia: explica el motivo (al menos 5 caracteres).';
+  }
+  mostrarErrores(form, errores);
+  if (Object.keys(errores).length) return;
+  const arqueo = { id: nuevoId(), esCaja: true, clase: 'arqueo', fecha: hoyISO(), creado: new Date().toISOString(),
+    contado: Number(contado), sistema, diferencia, nota, registradoPor: usuarioActual().nombre };
+  if (!guardarCaja([...leerCaja(), arqueo])) return;
+  $('#dlg-arqueo').close();
+  render();
+  aviso(diferencia === 0 ? 'Arqueo guardado: la caja cuadra' : `Arqueo guardado: ${diferencia > 0 ? 'sobrante' : 'faltante'} de ${soles(Math.abs(diferencia))}`);
+}
+
+async function eliminarMovimiento(id) {
+  const mov = leerCaja().find((m) => m.id === id);
+  if (!mov) return;
+  if (mov.clase === 'ingreso') {
+    // Si se quita un ingreso, la caja no puede quedar en negativo
+    const sinEste = movimientosEfectivo().filter((m) => m.id !== id);
+    let saldo = 0;
+    for (const m of sinEste) {
+      saldo += (m.clase === 'ingreso' ? 1 : -1) * Math.round(m.monto * 100);
+      if (saldo < 0) { aviso('No se puede eliminar: la caja quedaría en negativo'); return; }
+    }
+  }
+  const ok = await confirmar('¿Eliminar este movimiento?', `${mov.concepto} · ${soles(mov.monto)} del ${fechaCorta(mov.fecha)}.`, 'Sí, eliminar');
+  if (!ok) return;
+  guardarCaja(leerCaja().filter((m) => m.id !== id));
+  render();
+  aviso('Movimiento eliminado');
+}
+
+$('#btn-ingreso').addEventListener('click', () => abrirMovimiento('ingreso'));
+$('#btn-egreso').addEventListener('click', () => abrirMovimiento('egreso'));
+$('#btn-arqueo').addEventListener('click', abrirArqueo);
+$('#form-movimiento').addEventListener('submit', guardarMovimiento);
+$('#form-arqueo').addEventListener('submit', guardarArqueo);
+$('#form-arqueo').addEventListener('input', previaArqueo);
+$('#tabla-efectivo').addEventListener('click', (evento) => {
+  const boton = evento.target.closest('[data-borrar-mov]');
+  if (boton) eliminarMovimiento(boton.dataset.borrarMov);
+});
+document.querySelectorAll('[data-mover-caja]').forEach((b) => b.addEventListener('click', () => moverMes(Number(b.dataset.moverCaja))));
 
 // ================== ARRANQUE ==================
 
