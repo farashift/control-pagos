@@ -41,7 +41,7 @@ styles.css   → el diseño (colores, tarjetas, versión celular)
 app.js       → la lógica (validaciones, estados, totales, guardar datos)
 ```
 
-No necesita servidor ni base de datos: los datos se guardan en el navegador (`localStorage`).
+Los datos se guardan en la nube (Upstash Redis vía la API en Vercel) y una copia en el navegador.
 
 ## Cómo abrirlo en tu computadora
 
@@ -54,11 +54,11 @@ Una API pequeña en Vercel ([control-pagos-api](https://github.com/farashift/con
 guarda en secreto el token de Mercado Pago: crea el checkout y, al volver, consulta el pago a Mercado Pago.
 Solo si Mercado Pago lo confirma como aprobado y el monto coincide, el pago queda **Pagado** con su N° de operación y comprobante.
 
-## Limitación conocida del MVP
+## Datos compartidos en la nube
 
-Los datos se guardan **en el navegador donde se usa**. El gerente y la asistente ven la misma información
-si usan la misma computadora (por ejemplo, cada uno en su pestaña). Para usarlo desde dispositivos distintos
-hace falta una base de datos en la nube, que está planificada para el Sprint 2 (ver `COSTO_Y_DURACION.md`).
+Los pagos se guardan en una base de datos **Upstash Redis** a través de la API en Vercel (`/api/pagos`).
+Lo que se registra en un celular aparece en todos los dispositivos en unos 3 segundos (indicador **● En línea** arriba).
+Si no hay internet, el sistema sigue funcionando con los datos del navegador y envía los cambios cuando vuelve la conexión.
 
 ## Documentos
 
