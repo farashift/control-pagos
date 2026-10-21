@@ -299,6 +299,9 @@ function abrirFormularioPago(pago) {
     }
     form.elements.monto.value = pago.monto.toFixed(2);
   }
+  const rango = rangoVencimiento();
+  form.elements.vencimiento.min = rango.min;
+  form.elements.vencimiento.max = rango.max;
   $('#dlg-pago').showModal();
   form.elements.beneficiario.focus();
 }
@@ -314,6 +317,29 @@ function normalizarMonto(texto) {
   return monto;
 }
 
+// ================== VALIDACIONES COMUNES ==================
+
+// "2026-02-30" no existe: el navegador a veces deja escribir fechas así
+function fechaValida(iso) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso || '')) return false;
+  const [a, m, d] = iso.split('-').map(Number);
+  const f = new Date(a, m - 1, d);
+  return f.getFullYear() === a && f.getMonth() === m - 1 && f.getDate() === d;
+}
+
+// Texto con al menos una letra o número (no solo espacios, puntos o guiones)
+function textoValido(texto, minimo) {
+  return texto.length >= minimo && /[a-záéíóúüñ0-9]/i.test(texto);
+}
+
+// Rango permitido para vencimientos: hasta 2 años atrás y 5 años adelante
+function rangoVencimiento() {
+  return { min: sumarMeses(hoyISO(), -24), max: sumarMeses(hoyISO(), 60) };
+}
+
+const MEDIOS_PAGO = ['Agente', 'App del banco', 'Efectivo', 'Tarjeta'];
+const MONTO_MAXIMO = 9999999.99;
+
 // Revisa los datos del formulario. Devuelve los datos limpios y los errores encontrados.
 function validarPago(form) {
   const campos = form.elements;
@@ -327,7 +353,9 @@ function validarPago(form) {
   const errores = {};
 
   if (!datos.beneficiario) errores.beneficiario = 'Indica a quién se le paga.';
+  else if (!textoValido(datos.beneficiario, 2)) errores.beneficiario = 'Escribe un nombre válido (al menos 2 letras).';
   if (!datos.concepto) errores.concepto = 'Indica el concepto del pago.';
+  else if (!textoValido(datos.concepto, 3)) errores.concepto = 'Escribe un concepto válido (al menos 3 caracteres).';
   if (!TIPOS.includes(datos.tipo)) errores.tipo = 'Elige el tipo de pago.';
   else if (datos.tipo === 'Préstamo' && !form.dataset.id) {
     errores.tipo = 'Los préstamos se registran en la sección Préstamos.';
@@ -338,13 +366,15 @@ function validarPago(form) {
     errores.monto = 'Ingresa el monto.';
   } else if (!/^\d+(\.\d{1,2})?$/.test(datos.monto) || Number(datos.monto) <= 0) {
     errores.monto = 'El monto debe ser mayor que 0 y con máximo 2 decimales (ej. 150.50).';
-  } else if (Number(datos.monto) > 9999999.99) {
-    errores.monto = 'El monto es demasiado alto. Revisa que esté bien escrito.';
+  } else if (Number(datos.monto) > MONTO_MAXIMO) {
+    errores.monto = 'El monto máximo es S/ 9,999,999.99. Revisa que esté bien escrito.';
   }
 
+  const rango = rangoVencimiento();
   if (!datos.vencimiento) errores.vencimiento = 'Elige la fecha de vencimiento.';
-  else if (datos.vencimiento < '2000-01-01' || datos.vencimiento > '2099-12-31') {
-    errores.vencimiento = 'Revisa el año de la fecha de vencimiento.';
+  else if (!fechaValida(datos.vencimiento)) errores.vencimiento = 'Esa fecha no existe. Revísala.';
+  else if (datos.vencimiento < rango.min || datos.vencimiento > rango.max) {
+    errores.vencimiento = `La fecha debe estar entre el ${fechaCorta(rango.min)} y el ${fechaCorta(rango.max)}.`;
   }
 
   datos.monto = Number(datos.monto);
@@ -499,6 +529,7 @@ function abrirVentanaVoucher(id, modo) {
   $('#voucher-detalle').textContent = `${pago.beneficiario} · ${pago.concepto} · ${soles(pago.monto)}`;
   form.elements.fechaPago.value = hoyISO();
   form.elements.fechaPago.max = hoyISO();
+  form.elements.fechaPago.min = sumarMeses(hoyISO(), -24);
 
   $('#dlg-voucher').showModal();
 }
@@ -512,15 +543,17 @@ async function confirmarVoucher(evento) {
   const errores = {};
 
   if (marcando) {
-    if (!campos.fechaPago.value) errores.fechaPago = 'Indica la fecha de pago.';
-    else if (campos.fechaPago.value > hoyISO()) errores.fechaPago = 'La fecha de pago no puede ser futura.';
-    if (!campos.medio.value) errores.medio = 'Elige el medio de pago.';
+    const fecha = campos.fechaPago.value;
+    const minimo = sumarMeses(hoyISO(), -24);
+    if (!fecha) errores.fechaPago = 'Indica la fecha de pago.';
+    else if (!fechaValida(fecha)) errores.fechaPago = 'Esa fecha no existe. Revísala.';
+    else if (fecha > hoyISO()) errores.fechaPago = 'La fecha de pago no puede ser futura.';
+    else if (fecha < minimo) errores.fechaPago = `La fecha de pago no puede ser anterior al ${fechaCorta(minimo)}.`;
+    if (!MEDIOS_PAGO.includes(campos.medio.value)) errores.medio = 'Elige el medio de pago.';
   }
   // Sin voucher no se puede marcar como pagado
-  if (!archivo) errores.archivo = 'Adjunta el voucher (foto o PDF).';
-  else if (!archivo.type.startsWith('image/') && archivo.type !== 'application/pdf') {
-    errores.archivo = 'El voucher debe ser una imagen o un PDF.';
-  }
+  const problema = archivo ? problemaDelVoucher(archivo) : 'Adjunta el voucher (foto o PDF).';
+  if (problema) errores.archivo = problema;
 
   mostrarErrores(form, errores);
   if (Object.keys(errores).length) return;
@@ -556,26 +589,59 @@ async function confirmarVoucher(evento) {
   aviso(marcando ? 'Pago marcado como Pagado' : 'Voucher reemplazado');
 }
 
+// ================== VOUCHER: VALIDAR Y PREPARAR EL ARCHIVO ==================
+const TIPOS_IMAGEN = ['image/jpeg', 'image/png', 'image/webp', 'image/avif', 'image/gif', 'image/bmp'];
+const EXTENSIONES = { jpg: 'image/jpeg', jpeg: 'image/jpeg', jfif: 'image/jpeg', png: 'image/png', webp: 'image/webp',
+  avif: 'image/avif', gif: 'image/gif', bmp: 'image/bmp', pdf: 'application/pdf', heic: 'image/heic', heif: 'image/heif' };
+
+// Tipo real del archivo: el que da el sistema o, si viene vacío, el de su extensión
+function tipoDeArchivo(archivo) {
+  const extension = (archivo.name.split('.').pop() || '').toLowerCase();
+  return (archivo.type || EXTENSIONES[extension] || '').toLowerCase();
+}
+
+// Devuelve el problema del archivo, o '' si está bien
+function problemaDelVoucher(archivo) {
+  const tipo = tipoDeArchivo(archivo);
+  if (archivo.size === 0) return 'El archivo está vacío. Elige otro.';
+  if (tipo === 'image/heic' || tipo === 'image/heif') {
+    return 'Las fotos HEIC (iPhone) no se pueden leer aquí. Toma una captura de pantalla del voucher o envíala como JPG.';
+  }
+  if (tipo === 'application/pdf') {
+    return archivo.size > 600 * 1024 ? 'El PDF pesa más de 600 KB. Sube una foto o captura del voucher.' : '';
+  }
+  if (!TIPOS_IMAGEN.includes(tipo)) return 'Solo se aceptan fotos (JPG, PNG, WEBP, AVIF) o PDF.';
+  if (archivo.size > 15 * 1024 * 1024) return 'La foto pesa más de 15 MB. Toma una captura de pantalla del voucher.';
+  return '';
+}
+
 // Convierte el archivo en texto (data URL) para poder guardarlo.
-// Las fotos se achican para que no llenen la memoria del navegador.
+// Las fotos se achican y comprimen hasta que pesen poco (así se guardan rápido en la nube).
 async function leerVoucher(archivo) {
-  if (archivo.type === 'application/pdf') {
-    if (archivo.size > 600 * 1024) {
-      throw new Error('El PDF pesa más de 600 KB. Sube una foto o captura del voucher.');
-    }
-    return { nombre: archivo.name, tipo: archivo.type, datos: await leerComoDataURL(archivo) };
+  const tipo = tipoDeArchivo(archivo);
+  if (tipo === 'application/pdf') {
+    const datos = await leerComoDataURL(archivo);
+    const cabecera = atob(datos.split(',')[1].slice(0, 8));
+    if (!cabecera.startsWith('%PDF')) throw new Error('Ese archivo no es un PDF válido.');
+    return { nombre: archivo.name, tipo: 'application/pdf', datos: datos.replace(/^data:[^;]*;/, 'data:application/pdf;') };
   }
 
   const imagen = await cargarImagen(await leerComoDataURL(archivo));
-  const escala = Math.min(1, 1100 / Math.max(imagen.width, imagen.height));
-  const lienzo = document.createElement('canvas');
-  lienzo.width = Math.round(imagen.width * escala);
-  lienzo.height = Math.round(imagen.height * escala);
-  const ctx = lienzo.getContext('2d');
-  ctx.fillStyle = '#fff';
-  ctx.fillRect(0, 0, lienzo.width, lienzo.height);
-  ctx.drawImage(imagen, 0, 0, lienzo.width, lienzo.height);
-  return { nombre: archivo.name, tipo: 'image/jpeg', datos: lienzo.toDataURL('image/jpeg', 0.7) };
+  if (!imagen.width || !imagen.height) throw new Error('No se pudo abrir la imagen. Prueba con JPG o PNG.');
+  for (const [lado, calidad] of [[1100, 0.72], [900, 0.6], [700, 0.5]]) {
+    const escala = Math.min(1, lado / Math.max(imagen.width, imagen.height));
+    const lienzo = document.createElement('canvas');
+    lienzo.width = Math.max(1, Math.round(imagen.width * escala));
+    lienzo.height = Math.max(1, Math.round(imagen.height * escala));
+    const ctx = lienzo.getContext('2d');
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, lienzo.width, lienzo.height);
+    ctx.drawImage(imagen, 0, 0, lienzo.width, lienzo.height);
+    const datos = lienzo.toDataURL('image/jpeg', calidad);
+    if (datos.length <= 450 * 1024 || lado === 700) {
+      return { nombre: archivo.name.replace(/\.[^.]+$/, '') + '.jpg', tipo: 'image/jpeg', datos };
+    }
+  }
 }
 
 function leerComoDataURL(archivo) {
@@ -591,7 +657,7 @@ function cargarImagen(src) {
   return new Promise((resolver, fallar) => {
     const imagen = new Image();
     imagen.onload = () => resolver(imagen);
-    imagen.onerror = () => fallar(new Error('No se pudo abrir la imagen. Prueba con JPG, PNG o PDF.'));
+    imagen.onerror = () => fallar(new Error('No se pudo abrir la imagen (puede estar dañada). Prueba con otra foto, JPG o PNG.'));
     imagen.src = src;
   });
 }
@@ -1311,6 +1377,8 @@ function abrirFormularioPrestamo() {
   form.reset();
   mostrarErrores(form, {});
   form.elements.desembolso.value = hoyISO();
+  form.elements.desembolso.max = hoyISO();
+  form.elements.desembolso.min = sumarMeses(hoyISO(), -120);
   form.elements.primeraCuota.value = sumarMeses(hoyISO(), 1);
   vistaPreviaPrestamo();
   $('#dlg-prestamo').showModal();
@@ -1331,13 +1399,24 @@ function datosPrestamo(form) {
   };
   const errores = {};
   if (!datos.entidad) errores.entidad = 'Indica el banco o la entidad.';
+  else if (!textoValido(datos.entidad, 2)) errores.entidad = 'Escribe un nombre válido (al menos 2 letras).';
   if (!datos.descripcion) errores.descripcion = 'Indica para qué es el préstamo.';
+  else if (!textoValido(datos.descripcion, 3)) errores.descripcion = 'Escribe una descripción válida (al menos 3 caracteres).';
   if (!/^\d+(\.\d{1,2})?$/.test(datos.monto) || Number(datos.monto) <= 0) errores.monto = 'Monto mayor que 0, máximo 2 decimales.';
+  else if (Number(datos.monto) > MONTO_MAXIMO) errores.monto = 'El monto máximo es S/ 9,999,999.99.';
   if (!/^\d+(\.\d{1,2})?$/.test(datos.tea) || Number(datos.tea) > 200) errores.tea = 'TEA entre 0 y 200 (ej. 18.5).';
   if (!/^\d+$/.test(datos.cuotas) || Number(datos.cuotas) < 1 || Number(datos.cuotas) > 120) errores.cuotas = 'Entre 1 y 120 cuotas.';
+  const desembolsoMin = sumarMeses(hoyISO(), -120);
   if (!datos.desembolso) errores.desembolso = 'Elige la fecha de desembolso.';
+  else if (!fechaValida(datos.desembolso)) errores.desembolso = 'Esa fecha no existe. Revísala.';
+  else if (datos.desembolso > hoyISO()) errores.desembolso = 'El desembolso no puede ser una fecha futura.';
+  else if (datos.desembolso < desembolsoMin) errores.desembolso = `No puede ser anterior al ${fechaCorta(desembolsoMin)}.`;
   if (!datos.primeraCuota) errores.primeraCuota = 'Elige la fecha de la primera cuota.';
+  else if (!fechaValida(datos.primeraCuota)) errores.primeraCuota = 'Esa fecha no existe. Revísala.';
   else if (datos.desembolso && datos.primeraCuota <= datos.desembolso) errores.primeraCuota = 'Debe ser después del desembolso.';
+  else if (datos.desembolso && fechaValida(datos.desembolso) && datos.primeraCuota > sumarMeses(datos.desembolso, 12)) {
+    errores.primeraCuota = 'La primera cuota debe ser dentro del año siguiente al desembolso.';
+  }
   datos.monto = Number(datos.monto);
   datos.tea = Number(datos.tea);
   datos.cuotas = Number(datos.cuotas);
