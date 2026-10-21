@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
-  <link rel="stylesheet" href="styles.css?v=20">
+  <link rel="stylesheet" href="styles.css?v=22">
 </head>
 <body>
   <noscript><p style="padding:16px">Activa JavaScript para usar el sistema.</p></noscript>
@@ -58,7 +58,8 @@
 
     <main class="contenido">
       <nav class="pestanas">
-        <button class="pestana activa" data-vista="pagos">Pagos del mes</button>
+        <button class="pestana activa" data-vista="pagos">Pagos</button>
+        <button class="pestana" data-vista="calendario">Calendario</button>
         <button class="pestana" data-vista="prestamos">Préstamos</button>
       </nav>
 
@@ -115,6 +116,38 @@
         </table>
         <p id="lista-vacia" class="vacio" hidden></p>
       </section>
+      </div>
+
+      <!-- CALENDARIO: los pagos de cada día del mes -->
+      <div id="vista-calendario" hidden>
+        <div class="encabezado">
+          <div class="saludo">
+            <h1>Calendario</h1>
+            <p>Qué hay que pagar cada día del mes. Toca un día para ver sus pagos.</p>
+          </div>
+          <div class="mes-nav">
+            <button class="btn" data-mover="-1" aria-label="Mes anterior">‹ Anterior</button>
+            <h2 id="calendario-titulo"></h2>
+            <button class="btn" data-mover="1" aria-label="Mes siguiente">Siguiente ›</button>
+          </div>
+        </div>
+        <section class="tarjeta calendario-caja">
+          <div class="leyenda">
+            <span><i class="punto-estado pagado"></i>Pagado</span>
+            <span><i class="punto-estado pendiente"></i>Pendiente</span>
+            <span><i class="punto-estado vencido"></i>Vencido</span>
+            <span><i class="punto-hoy"></i>Hoy</span>
+          </div>
+          <div class="calendario-semana">
+            <span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span><span>Dom</span>
+          </div>
+          <div id="calendario-dias" class="calendario-dias"></div>
+        </section>
+        <section class="tarjeta dia-detalle">
+          <h3 id="dia-titulo"></h3>
+          <p id="dia-resumen" class="sub"></p>
+          <div id="dia-pagos" class="dia-pagos"></div>
+        </section>
       </div>
 
       <!-- PRÉSTAMOS: detalle de cada préstamo y su cronograma -->
@@ -373,6 +406,6 @@
 
   <div id="aviso" class="aviso" hidden></div>
 
-  <script src="app.js?v=20"></script>
+  <script src="app.js?v=22"></script>
 </body>
 </html>

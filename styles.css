@@ -575,6 +575,69 @@ input[type="file"] { padding: .55rem; background: #f8f9fc; border-style: dashed;
   .cronograma thead { display: table-header-group; }
 }
 
+
+/* ================== CALENDARIO ================== */
+.calendario-caja { padding: 1.2rem; }
+.leyenda { display: flex; flex-wrap: wrap; gap: 1rem; font-size: .8rem; color: var(--suave); font-weight: 600; margin-bottom: .9rem; }
+.leyenda span { display: inline-flex; align-items: center; gap: .35rem; }
+.punto-estado { display: inline-block; width: .55rem; height: .55rem; border-radius: 50%; background: #c9cdda; }
+.punto-estado.pagado { background: var(--ok); }
+.punto-estado.pendiente { background: #e0a800; }
+.punto-estado.vencido { background: var(--mal); }
+.punto-hoy { display: inline-block; width: .9rem; height: .9rem; border-radius: 5px; border: 2px solid var(--primario); }
+.calendario-semana, .calendario-dias { display: grid; grid-template-columns: repeat(7, 1fr); gap: .45rem; }
+.calendario-semana span { text-align: center; font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #8a90a8; padding-bottom: .3rem; }
+.dia {
+  font: inherit; text-align: left; color: inherit; cursor: pointer;
+  min-height: 6.4rem; padding: .45rem .5rem; border-radius: 12px;
+  border: 1px solid var(--linea); background: #fff;
+  display: flex; flex-direction: column; gap: .2rem; overflow: hidden;
+  transition: transform .12s, box-shadow .12s, border-color .12s;
+}
+.dia:hover { border-color: #c8cce0; box-shadow: var(--sombra); transform: translateY(-1px); }
+.vacio-dia { border: 0; background: none; cursor: default; }
+.vacio-dia:hover { box-shadow: none; transform: none; }
+.num-dia { font-weight: 800; font-size: .9rem; }
+.total-dia { font-size: .75rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.chip-dia { font-size: .68rem; font-weight: 700; padding: .1rem .35rem; border-radius: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chip-dia.pagado { background: var(--ok-fondo); color: var(--ok); }
+.chip-dia.pendiente { background: var(--alerta-fondo); color: var(--alerta); }
+.chip-dia.vencido { background: var(--mal-fondo); color: var(--mal); }
+.mas-dia { font-size: .68rem; color: var(--suave); font-weight: 600; }
+.puntos-dia { display: none; gap: .2rem; flex-wrap: wrap; margin-top: auto; }
+.dia.con-pagos.vencido { background: #fff8f9; }
+.dia.con-pagos.pendiente { background: #fffcf3; }
+.dia.con-pagos.pagado { background: #f6fcf9; }
+.dia.hoy { border: 2px solid var(--primario); }
+.dia.hoy .num-dia { color: var(--primario-oscuro); }
+.dia.elegido { box-shadow: 0 0 0 3px rgba(79, 70, 229, .25); border-color: var(--primario); }
+
+.dia-detalle { margin-top: 1rem; }
+.dia-detalle h3 { font-size: 1.15rem; }
+.dia-pagos { display: grid; gap: .7rem; margin-top: .6rem; }
+.dia-pago { display: grid; grid-template-columns: 1fr auto auto; gap: 1rem; align-items: center; padding: .8rem; border: 1px solid var(--linea); border-radius: 14px; }
+.dia-pago-info { display: flex; flex-direction: column; gap: .25rem; min-width: 0; }
+.dia-pago-concepto { color: var(--suave); font-size: .85rem; padding-left: 2.75rem; }
+.dia-pago-monto { display: flex; flex-direction: column; align-items: flex-end; gap: .3rem; }
+.dia-pago-monto b { font-size: 1.05rem; font-variant-numeric: tabular-nums; }
+.dia-pago .acciones-caja { min-width: 0; }
+
+@media (max-width: 760px) {
+  .calendario-semana, .calendario-dias { gap: .25rem; }
+  .dia { min-height: 3.6rem; padding: .35rem; align-items: center; border-radius: 10px; }
+  .total-dia, .chip-dia, .mas-dia { display: none; }
+  .puntos-dia { display: flex; justify-content: center; }
+  .dia-pago { grid-template-columns: 1fr auto; }
+  .dia-pago .acciones-caja { grid-column: 1 / -1; width: 100%; align-items: stretch; }
+  .dia-pago .acciones-principales { grid-template-columns: 1fr; }
+  .dia-pago .acciones-secundarias { justify-content: center; flex-wrap: wrap; }
+}
+@media (max-width: 560px) {
+  .calendario-caja { padding: .8rem; }
+  .calendario-semana span { font-size: .62rem; letter-spacing: 0; }
+  .leyenda { gap: .6rem; font-size: .74rem; }
+}
+
 /* ================== CELULAR ================== */
 @media (max-width: 900px) {
   .login { grid-template-columns: 1fr; }

@@ -61,12 +61,15 @@ function guardarRegistros(pagos) {
 // Los pagos viven en una base de datos (Upstash Redis) detrás de la API en Vercel.
 // Cada 3 segundos se revisa si alguien cambió algo; si sí, se descargan y se redibuja.
 
+// Con ?sinNube en el link la página no se conecta a la nube (para pruebas sin tocar los datos reales)
+const SIN_NUBE = new URLSearchParams(location.search).has('sinNube');
 const NUBE_API = 'https://control-pagos-api.vercel.app/api/pagos';
 let versionNube = null;
 let enviosEnCurso = 0;
 let cambiosSinEnviar = [];
 
 async function enviarANube(cambios) {
+  if (SIN_NUBE) return;
   enviosEnCurso++;
   try {
     const respuesta = await fetch(NUBE_API, {
@@ -86,6 +89,14 @@ async function enviarANube(cambios) {
 }
 
 async function sincronizarNube() {
+  if (SIN_NUBE) {
+    estadoNube(false);
+    if (localStorage.getItem(CLAVE_PAGOS) === null) {
+      localStorage.setItem(CLAVE_PAGOS, JSON.stringify(crearDatosDemo()));
+      revisarCambios();
+    }
+    return;
+  }
   if (enviosEnCurso > 0) return;
   if (cambiosSinEnviar.length) {
     const pendientes = cambiosSinEnviar;
@@ -262,6 +273,7 @@ function render() {
   renderResumen();
   renderLista();
   renderPrestamos();
+  renderCalendario();
 }
 
 // ================== HU-02: REGISTRAR UN PAGO PENDIENTE ==================
@@ -1209,6 +1221,7 @@ function cambiarPestana(nombre) {
   vista.pestana = nombre;
   $('#vista-pagos').hidden = nombre !== 'pagos';
   $('#vista-prestamos').hidden = nombre !== 'prestamos';
+  $('#vista-calendario').hidden = nombre !== 'calendario';
   document.querySelectorAll('.pestana').forEach((b) => b.classList.toggle('activa', b.dataset.vista === nombre));
   render();
 }
@@ -1385,6 +1398,94 @@ $('#lista-prestamos').addEventListener('click', (evento) => {
   if (verBtn) verCronograma(verBtn.dataset.cronograma);
   if (borrarBtn) eliminarPrestamo(borrarBtn.dataset.eliminarPrestamo);
 });
+
+// ================== CALENDARIO ==================
+// El mes en cuadrícula (lunes a domingo). Cada día muestra sus pagos con el color de su estado.
+// Al tocar un día, abajo aparecen sus pagos con los mismos botones que en la lista.
+
+let diaElegido = null; // "2026-10-22"
+
+function renderCalendario() {
+  const anio = vista.anio, mes = vista.mes;
+  const prefijo = `${anio}-${String(mes + 1).padStart(2, '0')}`;
+  $('#calendario-titulo').textContent = `${MESES[mes]} ${anio}`;
+
+  const pagosMes = pagosDelMes();
+  const porDia = new Map();
+  for (const p of pagosMes) {
+    const dia = p.vencimiento;
+    if (!porDia.has(dia)) porDia.set(dia, []);
+    porDia.get(dia).push(p);
+  }
+
+  // Si el día elegido no es de este mes: hoy (si es este mes) o el primer día con pagos
+  if (!diaElegido || !diaElegido.startsWith(prefijo)) {
+    diaElegido = hoyISO().startsWith(prefijo) ? hoyISO() : (pagosMes[0] ? pagosMes[0].vencimiento : `${prefijo}-01`);
+  }
+
+  const primerDia = new Date(anio, mes, 1);
+  const vacios = (primerDia.getDay() + 6) % 7; // lunes = 0
+  const diasMes = new Date(anio, mes + 1, 0).getDate();
+  const celdas = [];
+  for (let i = 0; i < vacios; i++) celdas.push('<div class="dia vacio-dia"></div>');
+  for (let d = 1; d <= diasMes; d++) {
+    const iso = `${prefijo}-${String(d).padStart(2, '0')}`;
+    const pagos = porDia.get(iso) || [];
+    const estados = pagos.map(estadoDe);
+    const peor = estados.includes('Vencido') ? 'vencido' : estados.includes('Pendiente') ? 'pendiente' : pagos.length ? 'pagado' : '';
+    const total = pagos.reduce((s, p) => s + Math.round(p.monto * 100), 0) / 100;
+    const chips = pagos.slice(0, 2).map((p) => `<span class="chip-dia ${estadoDe(p).toLowerCase()}">${seguro(p.beneficiario)}</span>`).join('');
+    const mas = pagos.length > 2 ? `<span class="mas-dia">+${pagos.length - 2} más</span>` : '';
+    const clases = ['dia', peor && `con-pagos ${peor}`, iso === hoyISO() && 'hoy', iso === diaElegido && 'elegido'].filter(Boolean).join(' ');
+    celdas.push(`
+      <button class="${clases}" data-dia="${iso}" title="${pagos.length ? `${pagos.length} pago(s) · ${soles(total)}` : 'Sin pagos'}">
+        <span class="num-dia">${d}</span>
+        ${pagos.length ? `<span class="total-dia">${soles(total)}</span>${chips}${mas}<span class="puntos-dia">${estados.map((e) => `<i class="punto-estado ${e.toLowerCase()}"></i>`).join('')}</span>` : ''}
+      </button>`);
+  }
+  $('#calendario-dias').innerHTML = celdas.join('');
+  renderDiaElegido(porDia.get(diaElegido) || []);
+}
+
+function renderDiaElegido(pagos) {
+  const [a, m, d] = diaElegido.split('-').map(Number);
+  const fecha = new Date(a, m - 1, d);
+  const nombreDia = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'][fecha.getDay()];
+  $('#dia-titulo').textContent = `${nombreDia} ${d} de ${MESES[m - 1].toLowerCase()}${diaElegido === hoyISO() ? ' · Hoy' : ''}`;
+  const total = pagos.reduce((s, p) => s + Math.round(p.monto * 100), 0) / 100;
+  $('#dia-resumen').textContent = pagos.length
+    ? `${pagos.length} ${pagos.length === 1 ? 'pago vence' : 'pagos vencen'} este día · Total ${soles(total)}`
+    : 'No hay pagos que venzan este día.';
+  $('#dia-pagos').innerHTML = pagos.map((p) => {
+    const estado = estadoDe(p);
+    const detalle = p.pagado ? `Pagado el ${fechaCorta(p.fechaPago)} · ${seguro(p.medio)}` : avisoDeDias(p);
+    return `
+      <div class="dia-pago">
+        <div class="dia-pago-info">
+          <span class="benef" data-inicial="${seguro(p.beneficiario.charAt(0).toUpperCase())}">${seguro(p.beneficiario)}</span>
+          <span class="dia-pago-concepto">${seguro(p.concepto)} · ${seguro(p.tipo)}</span>
+        </div>
+        <div class="dia-pago-monto">
+          <b>${soles(p.monto)}</b>
+          <span class="estado ${estado.toLowerCase()}">${estado}</span>
+          <small class="detalle">${detalle}</small>
+        </div>
+        <div class="acciones-caja">${accionesDe(p, estado)}</div>
+      </div>`;
+  }).join('');
+}
+
+$('#calendario-dias').addEventListener('click', (evento) => {
+  const celda = evento.target.closest('[data-dia]');
+  if (!celda) return;
+  diaElegido = celda.dataset.dia;
+  renderCalendario();
+});
+document.querySelectorAll('[data-mover]').forEach((b) => b.addEventListener('click', () => {
+  diaElegido = null;
+  moverMes(Number(b.dataset.mover));
+}));
+$('#dia-pagos').addEventListener('click', clickEnTabla); // mismos botones que la lista de pagos
 
 // ================== ARRANQUE ==================
 
