@@ -23,14 +23,92 @@ function leerPagos() {
   }
 }
 
+// Guarda en el navegador y manda a la nube solo lo que cambió (pagos nuevos/editados y borrados)
 function guardarPagos(pagos) {
+  const antes = leerPagos();
   try {
     localStorage.setItem(CLAVE_PAGOS, JSON.stringify(pagos));
-    return true;
   } catch {
     alert('No hay espacio para guardar. Prueba con un voucher más liviano.');
     return false;
   }
+  const previos = new Map(antes.map((p) => [p.id, JSON.stringify(p)]));
+  const actuales = new Set(pagos.map((p) => p.id));
+  const guardar = pagos.filter((p) => previos.get(p.id) !== JSON.stringify(p));
+  const borrar = antes.filter((p) => !actuales.has(p.id)).map((p) => p.id);
+  if (guardar.length || borrar.length) enviarANube({ guardar, borrar });
+  return true;
+}
+
+// ================== NUBE: DATOS COMPARTIDOS ENTRE DISPOSITIVOS ==================
+// Los pagos viven en una base de datos (Upstash Redis) detrás de la API en Vercel.
+// Cada 3 segundos se revisa si alguien cambió algo; si sí, se descargan y se redibuja.
+
+const NUBE_API = 'https://control-pagos-api.vercel.app/api/pagos';
+let versionNube = null;
+let enviosEnCurso = 0;
+let cambiosSinEnviar = [];
+
+async function enviarANube(cambios) {
+  enviosEnCurso++;
+  try {
+    const respuesta = await fetch(NUBE_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(cambios),
+    });
+    if (!respuesta.ok) throw new Error('nube');
+    versionNube = null; // la próxima revisión descarga todo de nuevo
+    estadoNube(true);
+  } catch {
+    cambiosSinEnviar.push(cambios); // se reintenta en la siguiente revisión
+    estadoNube(false);
+  } finally {
+    enviosEnCurso--;
+  }
+}
+
+async function sincronizarNube() {
+  if (enviosEnCurso > 0) return;
+  if (cambiosSinEnviar.length) {
+    const pendientes = cambiosSinEnviar;
+    cambiosSinEnviar = [];
+    for (const cambios of pendientes) await enviarANube(cambios);
+    return;
+  }
+  try {
+    const respuesta = await fetch(`${NUBE_API}?version=${versionNube ?? ''}`, { cache: 'no-store' });
+    const datos = await respuesta.json();
+    if (!respuesta.ok) throw new Error('nube');
+    estadoNube(true);
+    if (datos.sinCambios || enviosEnCurso > 0) return;
+    versionNube = datos.version;
+
+    if (!datos.inicializado) {
+      // Primera vez que se usa la nube: se suben los pagos de ejemplo
+      const demo = crearDatosDemo();
+      localStorage.setItem(CLAVE_PAGOS, JSON.stringify(demo));
+      enviarANube({ guardar: demo, borrar: [] });
+    } else {
+      localStorage.setItem(CLAVE_PAGOS, JSON.stringify(datos.pagos));
+    }
+    revisarCambios();
+  } catch {
+    estadoNube(false);
+    // Sin nube: el sistema sigue funcionando con los datos del navegador
+    if (localStorage.getItem(CLAVE_PAGOS) === null) {
+      localStorage.setItem(CLAVE_PAGOS, JSON.stringify(crearDatosDemo()));
+      revisarCambios();
+    }
+  }
+}
+
+function estadoNube(enLinea) {
+  const marca = $('#estado-nube');
+  if (!marca) return;
+  marca.classList.toggle('desconectado', !enLinea);
+  marca.title = enLinea ? 'Datos sincronizados en la nube' : 'Sin conexión: se reintentará';
+  $('#estado-nube-texto').textContent = enLinea ? 'En línea' : 'Sin conexión';
 }
 
 // ================== UTILIDADES ==================
@@ -443,8 +521,8 @@ async function confirmarVoucher(evento) {
 // Las fotos se achican para que no llenen la memoria del navegador.
 async function leerVoucher(archivo) {
   if (archivo.type === 'application/pdf') {
-    if (archivo.size > 1024 * 1024) {
-      throw new Error('El PDF pesa más de 1 MB. Sube una foto o captura del voucher.');
+    if (archivo.size > 600 * 1024) {
+      throw new Error('El PDF pesa más de 600 KB. Sube una foto o captura del voucher.');
     }
     return { nombre: archivo.name, tipo: archivo.type, datos: await leerComoDataURL(archivo) };
   }
@@ -775,9 +853,7 @@ async function borrarTodosLosDatos() {
 }
 
 // La primera vez que se abre el sistema se cargan pagos de ejemplo
-if (localStorage.getItem(CLAVE_PAGOS) === null) {
-  guardarPagos(crearDatosDemo());
-}
+// Los pagos se cargan desde la nube (ver sincronizarNube)
 
 // ================== HU-08: PAGAR CON MERCADO PAGO ==================
 // El botón lleva al checkout real de Mercado Pago (tarjeta, Yape o dinero en cuenta).
@@ -1039,6 +1115,9 @@ window.addEventListener('storage', revisarCambios);
 window.addEventListener('focus', revisarCambios);
 document.addEventListener('visibilitychange', revisarCambios);
 setInterval(revisarCambios, 2000);
+sincronizarNube();
+setInterval(sincronizarNube, 3000);
+window.addEventListener('focus', sincronizarNube);
 
 // Botones "Cancelar" de cualquier ventana
 document.querySelectorAll('[data-cerrar]').forEach((boton) => {

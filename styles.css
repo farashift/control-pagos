@@ -216,6 +216,10 @@ input:focus, select:focus {
   background: var(--primario-suave);
 }
 #btn-salir { padding: .5rem .9rem; white-space: nowrap; }
+.estado-nube { margin-left: auto; display: inline-flex; align-items: center; gap: .4rem; font-size: .78rem; font-weight: 700; color: var(--ok); background: var(--ok-fondo); padding: .3rem .65rem; border-radius: 999px; }
+.estado-nube .punto { width: .5rem; height: .5rem; border-radius: 50%; background: currentColor; box-shadow: 0 0 0 3px rgba(15, 138, 95, .18); }
+.estado-nube.desconectado { color: #8a90a8; background: #f1f2f7; }
+.estado-nube + .usuario { margin-left: 0; }
 .borrar-datos { display: inline-flex; align-items: center; gap: .4rem; padding: .5rem .8rem; color: var(--mal); border-color: #f6cfd6; background: #fff; }
 .borrar-datos:hover { background: var(--mal-fondo); border-color: #f0b3bf; }
 .borrar-datos::before {
@@ -569,6 +573,7 @@ input[type="file"] { padding: .55rem; background: #f8f9fc; border-style: dashed;
   .usuario .rol { display: none; }
   .borrar-datos .texto-boton { display: none; }  /* en celular solo el ícono */
   .usuario b { display: none; }  /* queda el círculo con la inicial */
+  #estado-nube-texto { display: none; }
   .barra { gap: .6rem; }
   .encabezado { align-items: stretch; }
   .saludo h1 { font-size: 1.3rem; }
