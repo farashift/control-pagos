@@ -65,4 +65,5 @@ Si no hay internet, el sistema sigue funcionando con los datos del navegador y e
 - [`COSTO_Y_DURACION.md`](COSTO_Y_DURACION.md) — lo que se presenta al cliente: cuánto cuesta y cuánto demora.
 - [`GUIA_PRESENTACION.md`](GUIA_PRESENTACION.md) — guion de la demo y explicación del código.
 - [`CHECKLIST_DE_PRUEBAS.md`](CHECKLIST_DE_PRUEBAS.md) — prueba de los 36 criterios en el sistema publicado, con capturas.
+- [`REVISION_DEL_CLIENTE.md`](REVISION_DEL_CLIENTE.md) — revisión completa como cliente: ajustes pedidos y reglas de cada campo.
 - [`jira/`](jira/) — CSV para importar el proyecto Scrum en Jira (épica, 10 historias, 24 subtareas, Sprint 1) y su guía.
