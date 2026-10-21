@@ -2,7 +2,7 @@
 
 ## Antes de empezar (2 minutos antes)
 
-> **¿Empezar vacío?** Si quieres que el profe vea el sistema sin datos y registre todo desde cero, entra como asistente y usa **Borrar datos** (botón rojo arriba, junto a Cerrar sesión). Pide confirmación. Para volver a los datos de ejemplo usa el link `#reiniciar` del paso 2.
+> El sistema arranca **vacío**: el profe registra todo desde cero.
 
 1. Abre el link del sistema en Chrome.
 2. Entra como asistente y luego abre este link: **https://farashift.github.io/control-pagos/#reiniciar** → confirma con **Sí, reiniciar**.
@@ -57,7 +57,7 @@ El profe tiene las historias en la mano. Recorre cada una diciendo el criterio y
 - **Eliminar**: pide confirmación antes de borrar.
 - En un pagado: **Editar** (si se equivocó en el monto o el concepto: sigue Pagado y conserva su voucher),
   **Cambiar voucher** (si se subió el equivocado) y **Volver a pendiente** (con confirmación).
-- El gerente no tiene ninguno de estos botones, y no puede reiniciar los datos: no puede borrar nada.
+- El gerente no tiene ninguno de estos botones: no puede borrar nada.
 
 ### HU-07 · Consultar meses anteriores
 - **‹ Anterior**: se ve el mes pasado con su propio resumen. Un pago quedó sin pagar ahí.

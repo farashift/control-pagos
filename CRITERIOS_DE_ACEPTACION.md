@@ -3,7 +3,7 @@
 **Sistema:** https://farashift.github.io/control-pagos/  
 **Usuarios:** `asistente / asistente123` · `gerente / gerente123`
 
-## Resultado: 80 de 81 criterios cumplidos · 1 parcial
+## Resultado: 77 de 78 criterios cumplidos · 1 parcial
 
 | ID | Historia | Usuario | Prioridad | Puntos | Criterios | Estado |
 |---|---|---|---|---|---|---|
@@ -18,10 +18,9 @@
 | HU-09 | Gestionar préstamos | Asistente (registra) · Gerente (consulta) | Alta | 5 | 9 | ✅ 9/9 |
 | HU-10 | Ver el calendario de pagos | Gerente y asistente | Media | 3 | 5 | ✅ 5/5 |
 | HU-11 | Datos compartidos entre dispositivos | Gerente y asistente | Alta | 5 | 4 | ✅ 4/4 |
-| HU-12 | Borrar datos para empezar desde cero | Asistente | Baja | 1 | 3 | ✅ 3/3 |
-| HU-13 | Controlar el efectivo (caja chica) | Asistente (registra) · Gerente (consulta) | Media | 3 | 5 | ✅ 5/5 |
-| HU-14 | Evitar errores y alteraciones en los pagos | Asistente · Gerente | Alta | 3 | 5 | ✅ 5/5 |
-| HU-15 | Descargar el reporte del mes | Gerente y asistente | Baja | 1 | 2 | ✅ 2/2 |
+| HU-12 | Controlar el efectivo (caja chica) | Asistente (registra) · Gerente (consulta) | Media | 3 | 5 | ✅ 5/5 |
+| HU-13 | Evitar errores y alteraciones en los pagos | Asistente · Gerente | Alta | 3 | 5 | ✅ 5/5 |
+| HU-14 | Descargar el reporte del mes | Gerente y asistente | Baja | 1 | 2 | ✅ 2/2 |
 
 ## HU-01 · Iniciar sesión
 
@@ -166,17 +165,7 @@
 | 3 | Arriba se ve el estado: "En línea" o "Sin conexión". | ✅ Cumple |  |
 | 4 | Sin internet el sistema sigue funcionando y envía los cambios cuando vuelve la conexión. | ✅ Cumple |  |
 
-## HU-12 · Borrar datos para empezar desde cero
-
-*Como asistente, quiero vaciar el sistema, para empezar a registrar los pagos desde cero.*
-
-| # | Criterio de aceptación | Estado | Nota |
-|---|---|---|---|
-| 1 | El botón "Borrar datos" solo lo ve la asistente. | ✅ Cumple |  |
-| 2 | Pide confirmación e indica cuántos registros se borrarán. | ✅ Cumple |  |
-| 3 | Deja el sistema vacío en todos los dispositivos y no vuelve a cargar ejemplos solo. | ✅ Cumple |  |
-
-## HU-13 · Controlar el efectivo (caja chica)
+## HU-12 · Controlar el efectivo (caja chica)
 
 *Como asistente, quiero controlar el dinero en efectivo de la caja, para saber cuánto hay y que no se pierda.*
 
@@ -188,7 +177,7 @@
 | 4 | Arqueo: compara el dinero contado con el sistema, muestra sobrante o faltante y exige el motivo si no cuadra. | ✅ Cumple |  |
 | 5 | Movimientos del mes con saldo acumulado; el gerente solo consulta. | ✅ Cumple |  |
 
-## HU-14 · Evitar errores y alteraciones en los pagos
+## HU-13 · Evitar errores y alteraciones en los pagos
 
 *Como gerente, quiero que el sistema avise de pagos repetidos o montos inusuales y guarde quién cambió cada pago, para que nadie altere los pagos sin que lo note.*
 
@@ -200,7 +189,7 @@
 | 4 | Cada pago guarda su historial: quién, cuándo y qué cambió (registro, edición con valor anterior y nuevo, pago, voucher, reversión). | ✅ Cumple |  |
 | 5 | El gerente puede ver el historial de cualquier pago. | ✅ Cumple |  |
 
-## HU-15 · Descargar el reporte del mes
+## HU-14 · Descargar el reporte del mes
 
 *Como gerente, quiero descargar los pagos del mes en Excel, para revisarlos o enviarlos al contador.*
 
@@ -213,5 +202,5 @@
 
 | ID | Historia | Descripción |
 |---|---|---|
-| HU-16 | Pagos recurrentes automáticos | Como asistente, quiero que los pagos que se repiten cada mes (como el internet) se creen solos, para no registrarlos cada vez. |
-| HU-17 | Avisos por correo o WhatsApp | Como gerente, quiero recibir un aviso cuando un pago esté por vencer o haya vencido, para actuar a tiempo. |
+| HU-15 | Pagos recurrentes automáticos | Como asistente, quiero que los pagos que se repiten cada mes (como el internet) se creen solos, para no registrarlos cada vez. |
+| HU-16 | Avisos por correo o WhatsApp | Como gerente, quiero recibir un aviso cuando un pago esté por vencer o haya vencido, para actuar a tiempo. |
