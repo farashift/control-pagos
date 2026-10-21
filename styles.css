@@ -540,6 +540,41 @@ input[type="file"] { padding: .55rem; background: #f8f9fc; border-style: dashed;
 .acciones-secundarias .btn.enlace.rojo { color: #c06276; }
 .acciones-secundarias .btn.enlace.rojo:hover { color: var(--mal); background: var(--mal-fondo); }
 
+
+/* ================== PRÉSTAMOS ================== */
+.pestanas { display: inline-flex; gap: .3rem; background: #fff; border: 1px solid var(--linea); border-radius: 12px; padding: .3rem; margin-bottom: 1.2rem; box-shadow: var(--sombra); }
+.pestana { font: inherit; font-weight: 700; font-size: .9rem; border: 0; background: none; color: var(--suave); padding: .55rem 1.1rem; border-radius: 9px; cursor: pointer; }
+.pestana:hover { color: var(--primario-oscuro); background: var(--primario-suave); }
+.pestana.activa { background: linear-gradient(135deg, #5b54f0, var(--primario-oscuro)); color: #fff; box-shadow: 0 4px 12px rgba(79, 70, 229, .28); }
+.kpi-fijo { cursor: default; }
+.kpi-fijo:hover { transform: none; box-shadow: var(--sombra); }
+.lista-prestamos { display: grid; gap: 1rem; }
+.prestamo-cab { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.prestamo-cab .benef { font-size: 1.1rem; }
+.prestamo-desc { color: var(--suave); margin: .35rem 0 1rem; font-weight: 500; }
+.prestamo-datos { display: grid; grid-template-columns: repeat(3, 1fr); gap: .1rem 1.2rem; }
+.dato { display: flex; justify-content: space-between; gap: 1rem; padding: .5rem 0; border-bottom: 1px dashed var(--linea); font-size: .9rem; }
+.dato span { color: var(--suave); }
+.dato b { text-align: right; font-variant-numeric: tabular-nums; }
+.dato.grande { flex-direction: column; gap: .15rem; border: 0; background: #f8f9fc; border-radius: 12px; padding: .7rem .9rem; margin-bottom: .6rem; }
+.dato.grande b { text-align: left; font-size: 1.25rem; letter-spacing: -.02em; }
+.progreso { height: .55rem; background: #eef0f6; border-radius: 999px; overflow: hidden; margin-top: 1.1rem; }
+.progreso div { height: 100%; background: linear-gradient(90deg, #16a974, #14b8a6); border-radius: 999px; }
+.progreso-texto { font-size: .85rem; color: var(--suave); margin: .5rem 0 0; }
+.prestamo-acciones { display: flex; gap: .5rem; justify-content: flex-end; flex-wrap: wrap; margin-top: .9rem; }
+.fila-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: .85rem; }
+.prestamo-previa { color: var(--primario-oscuro); background: var(--primario-suave); }
+.cronograma-caja { max-height: 60vh; overflow: auto; margin-top: .8rem; }
+.cronograma td, .cronograma th { padding: .55rem .5rem; font-size: .85rem; }
+.cronograma tfoot td { font-weight: 800; border-top: 2px solid var(--linea); background: #f8f9fc; }
+@media (max-width: 900px) { .prestamo-datos { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 560px) {
+  .prestamo-datos, .fila-3 { grid-template-columns: 1fr; gap: 0; }
+  .pestanas { display: flex; }
+  .pestana { flex: 1; padding: .55rem .5rem; }
+  .cronograma thead { display: table-header-group; }
+}
+
 /* ================== CELULAR ================== */
 @media (max-width: 900px) {
   .login { grid-template-columns: 1fr; }
@@ -551,15 +586,15 @@ input[type="file"] { padding: .55rem; background: #f8f9fc; border-style: dashed;
 
 /* En celular la tabla se convierte en tarjetas */
 @media (max-width: 760px) {
-  .tabla thead { display: none; }
-  .tabla, .tabla tbody, .tabla tr, .tabla td { display: block; width: 100%; }
-  .tabla tr { border: 1px solid var(--linea); border-radius: 14px; padding: .6rem .9rem; margin-bottom: .8rem; }
-  .tabla tbody tr:hover { background: none; }
-  .tabla td { border: none; padding: .32rem 0; display: flex; justify-content: space-between; align-items: center; gap: 1rem; text-align: right; }
-  .tabla tbody tr:last-child td { border: 0; }
-  .tabla td::before { content: attr(data-etiqueta); color: var(--suave); font-size: .78rem; text-align: left; }
-  .tabla td.acciones { justify-content: flex-end; flex-wrap: wrap; gap: .4rem; padding-top: .7rem; }
-  .tabla td.acciones::before { content: none; }
+  #tabla-pagos thead { display: none; }
+  #tabla-pagos, #tabla-pagos tbody, #tabla-pagos tr, #tabla-pagos td { display: block; width: 100%; }
+  #tabla-pagos tr { border: 1px solid var(--linea); border-radius: 14px; padding: .6rem .9rem; margin-bottom: .8rem; }
+  #tabla-pagos tbody tr:hover { background: none; }
+  #tabla-pagos td { border: none; padding: .32rem 0; display: flex; justify-content: space-between; align-items: center; gap: 1rem; text-align: right; }
+  #tabla-pagos tbody tr:last-child td { border: 0; }
+  #tabla-pagos td::before { content: attr(data-etiqueta); color: var(--suave); font-size: .78rem; text-align: left; }
+  #tabla-pagos td.acciones { justify-content: flex-end; flex-wrap: wrap; gap: .4rem; padding-top: .7rem; }
+  #tabla-pagos td.acciones::before { content: none; }
   .acciones .btn { margin-left: 0; }
   .acciones-caja { width: 100%; min-width: 0; align-items: stretch; }
   .acciones-principales { grid-template-columns: 1fr; }

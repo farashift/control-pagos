@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
-  <link rel="stylesheet" href="styles.css?v=18">
+  <link rel="stylesheet" href="styles.css?v=19">
 </head>
 <body>
   <noscript><p style="padding:16px">Activa JavaScript para usar el sistema.</p></noscript>
@@ -57,6 +57,12 @@
     </header>
 
     <main class="contenido">
+      <nav class="pestanas">
+        <button class="pestana activa" data-vista="pagos">Pagos del mes</button>
+        <button class="pestana" data-vista="prestamos">Préstamos</button>
+      </nav>
+
+      <div id="vista-pagos">
       <div class="encabezado">
         <div class="saludo">
           <h1 id="saludo"></h1>
@@ -109,6 +115,21 @@
         </table>
         <p id="lista-vacia" class="vacio" hidden></p>
       </section>
+      </div>
+
+      <!-- PRÉSTAMOS: detalle de cada préstamo y su cronograma -->
+      <div id="vista-prestamos" hidden>
+        <div class="encabezado">
+          <div class="saludo">
+            <h1>Préstamos</h1>
+            <p>Condiciones, cuotas y saldo de cada préstamo del negocio.</p>
+          </div>
+          <button id="btn-nuevo-prestamo" class="btn primario solo-asistente">Registrar préstamo</button>
+        </div>
+        <section class="resumen"><div id="prestamos-kpis" class="kpis"></div></section>
+        <div id="lista-prestamos" class="lista-prestamos"></div>
+        <p id="prestamos-vacio" class="vacio tarjeta" hidden>No hay préstamos registrados</p>
+      </div>
     </main>
 
     <footer class="pie">
@@ -269,8 +290,89 @@
     </div>
   </dialog>
 
+  <!-- PRÉSTAMOS: registrar -->
+  <dialog id="dlg-prestamo" class="dialogo-ancho">
+    <form id="form-prestamo" novalidate>
+      <h3>Registrar préstamo</h3>
+      <p class="sub">Las cuotas mensuales se crean solas en la lista de pagos de cada mes.</p>
+      <div class="fila-2">
+        <div>
+          <label>Banco o entidad
+            <input name="entidad" list="entidades" maxlength="60" placeholder="Ej. BCP">
+          </label>
+          <datalist id="entidades"><option>BCP</option><option>Interbank</option><option>BBVA</option><option>Scotiabank</option><option>Caja Trujillo</option><option>Mibanco</option></datalist>
+          <small class="campo-error" data-para="entidad"></small>
+        </div>
+        <div>
+          <label>N° de operación (opcional)
+            <input name="operacion" maxlength="40" placeholder="Ej. 191-4587320">
+          </label>
+        </div>
+      </div>
+      <label>Para qué es el préstamo
+        <input name="descripcion" maxlength="60" placeholder="Ej. Capital de trabajo">
+      </label>
+      <small class="campo-error" data-para="descripcion"></small>
+      <div class="fila-3">
+        <div>
+          <label>Monto prestado (S/)
+            <input name="monto" inputmode="decimal" maxlength="15" placeholder="12000">
+          </label>
+          <small class="campo-error" data-para="monto"></small>
+        </div>
+        <div>
+          <label>Tasa TEA (%)
+            <input name="tea" inputmode="decimal" maxlength="6" placeholder="18">
+          </label>
+          <small class="campo-error" data-para="tea"></small>
+        </div>
+        <div>
+          <label>N° de cuotas
+            <input name="cuotas" inputmode="numeric" maxlength="3" placeholder="12">
+          </label>
+          <small class="campo-error" data-para="cuotas"></small>
+        </div>
+      </div>
+      <div class="fila-2">
+        <div>
+          <label>Fecha de desembolso
+            <input name="desembolso" type="date">
+          </label>
+          <small class="campo-error" data-para="desembolso"></small>
+        </div>
+        <div>
+          <label>Fecha de la primera cuota
+            <input name="primeraCuota" type="date">
+          </label>
+          <small class="campo-error" data-para="primeraCuota"></small>
+        </div>
+      </div>
+      <p id="prestamo-previa" class="nota prestamo-previa"></p>
+      <div class="dialogo-botones">
+        <button type="button" class="btn" data-cerrar>Cancelar</button>
+        <button type="submit" class="btn primario">Guardar préstamo</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- PRÉSTAMOS: cronograma -->
+  <dialog id="dlg-cronograma" class="dialogo-ancho">
+    <h3 id="cronograma-titulo">Cronograma</h3>
+    <p id="cronograma-detalle" class="sub"></p>
+    <div class="cronograma-caja">
+      <table id="cronograma-tabla" class="tabla cronograma">
+        <thead><tr><th>N°</th><th>Vence</th><th class="num">Cuota</th><th class="num">Interés</th><th class="num">Capital</th><th class="num">Saldo</th><th>Estado</th></tr></thead>
+        <tbody></tbody>
+        <tfoot></tfoot>
+      </table>
+    </div>
+    <div class="dialogo-botones">
+      <button type="button" class="btn primario" data-cerrar>Cerrar</button>
+    </div>
+  </dialog>
+
   <div id="aviso" class="aviso" hidden></div>
 
-  <script src="app.js?v=18"></script>
+  <script src="app.js?v=19"></script>
 </body>
 </html>

@@ -15,7 +15,8 @@ const USUARIOS = [
 const CLAVE_PAGOS = 'cp_pagos';
 const CLAVE_SESION = 'cp_sesion';
 
-function leerPagos() {
+// En el almacén viven los pagos y los préstamos (estos llevan esPrestamo: true)
+function leerTodo() {
   try {
     return JSON.parse(localStorage.getItem(CLAVE_PAGOS)) || [];
   } catch {
@@ -23,9 +24,25 @@ function leerPagos() {
   }
 }
 
-// Guarda en el navegador y manda a la nube solo lo que cambió (pagos nuevos/editados y borrados)
+function leerPagos() {
+  return leerTodo().filter((r) => !r.esPrestamo);
+}
+
+function leerPrestamos() {
+  return leerTodo().filter((r) => r.esPrestamo);
+}
+
 function guardarPagos(pagos) {
-  const antes = leerPagos();
+  return guardarRegistros([...pagos, ...leerPrestamos()]);
+}
+
+function guardarPrestamos(prestamos) {
+  return guardarRegistros([...leerPagos(), ...prestamos]);
+}
+
+// Guarda en el navegador y manda a la nube solo lo que cambió (registros nuevos/editados y borrados)
+function guardarRegistros(pagos) {
+  const antes = leerTodo();
   try {
     localStorage.setItem(CLAVE_PAGOS, JSON.stringify(pagos));
   } catch {
@@ -195,6 +212,7 @@ function iniciarSesion(evento) {
   vista.anio = hoy.getFullYear();
   vista.mes = hoy.getMonth();
   vista.filtro = 'todos';
+  vista.pestana = 'pagos';
   $('#form-login').reset();
   $('#login-error').hidden = true;
   mostrarPantalla();
@@ -221,7 +239,7 @@ function mostrarPantalla() {
   $('#saludo-sub').textContent = usuario.rol === 'asistente'
     ? 'Registra los pagos y márcalos cuando estén pagados.'
     : 'Así van los pagos del negocio este mes.';
-  render();
+  cambiarPestana(vista.pestana || 'pagos');
   revisarReinicio();
   procesarRetornoMP();
 }
@@ -243,6 +261,7 @@ function render() {
   $('#filtro-estado').value = vista.filtro;
   renderResumen();
   renderLista();
+  renderPrestamos();
 }
 
 // ================== HU-02: REGISTRAR UN PAGO PENDIENTE ==================
@@ -808,15 +827,33 @@ function crearDatosDemo() {
     pago(-1, 15, 'Sedalib', 'Agua del local', 'Servicio', 64.80, 15, 'Efectivo'),
     pago(-1, 20, 'SUNAT', 'IGV mensual', 'Impuesto', 1730.00, 19, 'App del banco'),
     pago(-1, 26, 'Distribuidora Norte SAC', 'Factura F001-2231', 'Proveedor', 980.50),
-    pago(-1, 28, 'BCP', 'Préstamo cuota 5/12', 'Préstamo', 1120.00, 27, 'App del banco'),
     // Mes actual
     pago(0, 5, 'Movistar', 'Internet fibra', 'Servicio', 129.90, 3, 'App del banco'),
     pago(0, 12, 'Hidrandina', 'Luz del local', 'Servicio', 245.60),
     pago(0, 15, 'Sedalib', 'Agua del local', 'Servicio', 68.30, 14, 'Agente'),
     pago(0, 22, 'SUNAT', 'IGV mensual', 'Impuesto', 1850.00),
     pago(0, 25, 'Distribuidora Norte SAC', 'Factura F001-2310', 'Proveedor', 3200.00),
-    pago(0, 28, 'BCP', 'Préstamo cuota 6/12', 'Préstamo', 1120.00),
+    ...prestamoDemo(),
   ];
+}
+
+// Préstamo de ejemplo: BCP, S/ 12,300 al 18% TEA en 12 cuotas; ya se pagaron las 5 primeras
+function prestamoDemo() {
+  const prestamo = {
+    id: nuevoId(), esPrestamo: true, entidad: 'BCP', descripcion: 'Capital de trabajo',
+    operacion: '191-4587320', monto: 12300, tea: 18, cuotas: 12,
+    desembolso: fechaDemo(-6, 28), primeraCuota: fechaDemo(-5, 28),
+  };
+  const cuotas = cuotasDePrestamo(prestamo).map((c) => {
+    if (c.vencimiento.slice(0, 7) < hoyISO().slice(0, 7)) {
+      c.pagado = true;
+      c.fechaPago = c.vencimiento;
+      c.medio = 'App del banco';
+      c.voucher = voucherDemo(c);
+    }
+    return c;
+  });
+  return [prestamo, ...cuotas];
 }
 
 async function reiniciarDemo() {
@@ -827,7 +864,7 @@ async function reiniciarDemo() {
     'Sí, reiniciar',
   );
   if (!ok) return;
-  guardarPagos(crearDatosDemo());
+  guardarRegistros(crearDatosDemo());
   irAlMesActual();
   aviso('Datos de demostración cargados');
 }
@@ -835,19 +872,19 @@ async function reiniciarDemo() {
 // Deja el sistema vacío para registrar los pagos desde cero (solo la asistente, con confirmación)
 async function borrarTodosLosDatos() {
   if (usuarioActual()?.rol !== 'asistente') return;
-  const cantidad = leerPagos().length;
+  const cantidad = leerTodo().length;
   if (cantidad === 0) {
     aviso('No hay pagos registrados para borrar');
     return;
   }
   const ok = await confirmar(
     '¿Borrar todos los datos?',
-    `Se eliminarán los ${cantidad} pagos registrados de todos los meses, con sus vouchers. `
+    `Se eliminarán los ${cantidad} registros (pagos y préstamos) de todos los meses, con sus vouchers. `
       + 'El sistema quedará vacío para registrar los pagos desde cero. Esta acción no se puede deshacer.',
     'Sí, borrar todo',
   );
   if (!ok) return;
-  guardarPagos([]);
+  guardarRegistros([]);
   irAlMesActual();
   aviso('Datos borrados: el sistema está vacío');
 }
@@ -1082,6 +1119,263 @@ $('#mp-reintentar').addEventListener('click', () => abrirMercadoPago(pagoMP));
 $('#mp-ver').addEventListener('click', () => {
   $('#dlg-mp').close();
   verVoucher(pagoMP);
+});
+
+// ================== PRÉSTAMOS ==================
+// Cada préstamo guarda sus condiciones (entidad, monto, TEA, plazo, fechas). Al registrarlo se crean
+// solas sus cuotas mensuales como pagos tipo "Préstamo" (sistema francés: cuota fija), que aparecen
+// en la lista de cada mes y se pagan igual que cualquier otro pago.
+
+const redondear = (n) => Math.round(n * 100) / 100;
+
+// "2026-05-28" + 3 meses → "2026-08-28" (si el mes es más corto, último día del mes)
+function sumarMeses(iso, meses) {
+  const [a, m, d] = iso.split('-').map(Number);
+  const base = new Date(a, m - 1 + meses, 1);
+  const ultimo = new Date(base.getFullYear(), base.getMonth() + 1, 0).getDate();
+  const f = new Date(base.getFullYear(), base.getMonth(), Math.min(d, ultimo));
+  return f.getFullYear() + '-' + String(f.getMonth() + 1).padStart(2, '0') + '-' + String(f.getDate()).padStart(2, '0');
+}
+
+// Tasa efectiva mensual a partir de la TEA
+function tasaMensual(tea) {
+  return tea > 0 ? Math.pow(1 + tea / 100, 1 / 12) - 1 : 0;
+}
+
+// Cronograma con cuota fija: N°, vencimiento, cuota, interés, capital y saldo
+function cronograma(prestamo) {
+  const tem = tasaMensual(prestamo.tea);
+  const n = prestamo.cuotas;
+  const cuotaFija = redondear(tem ? prestamo.monto * tem / (1 - Math.pow(1 + tem, -n)) : prestamo.monto / n);
+  let saldo = prestamo.monto;
+  const filas = [];
+  for (let k = 1; k <= n; k++) {
+    const interes = redondear(saldo * tem);
+    const capital = k === n ? redondear(saldo) : redondear(cuotaFija - interes);
+    const cuota = k === n ? redondear(capital + interes) : cuotaFija;
+    saldo = redondear(saldo - capital);
+    filas.push({ n: k, vencimiento: sumarMeses(prestamo.primeraCuota, k - 1), cuota, interes, capital, saldo: Math.max(0, saldo) });
+  }
+  return filas;
+}
+
+// Las cuotas como pagos del sistema (aparecen en la lista de cada mes)
+function cuotasDePrestamo(prestamo) {
+  return cronograma(prestamo).map((fila) => ({
+    id: nuevoId(),
+    beneficiario: prestamo.entidad,
+    concepto: `Préstamo ${prestamo.descripcion} · cuota ${fila.n}/${prestamo.cuotas}`,
+    tipo: 'Préstamo',
+    monto: fila.cuota,
+    vencimiento: fila.vencimiento,
+    pagado: false,
+    prestamoId: prestamo.id,
+    cuotaN: fila.n,
+  }));
+}
+
+// Junta el cronograma con el estado real de cada cuota (pagada, pendiente, vencida)
+function detallePrestamo(prestamo, pagos = leerPagos()) {
+  const porCuota = new Map(pagos.filter((p) => p.prestamoId === prestamo.id).map((p) => [p.cuotaN, p]));
+  const filas = cronograma(prestamo).map((f) => {
+    const pago = porCuota.get(f.n);
+    return { ...f, pago, estado: pago ? estadoDe(pago) : 'Pendiente' };
+  });
+  const pagadas = filas.filter((f) => f.estado === 'Pagado');
+  const vencidas = filas.filter((f) => f.estado === 'Vencido');
+  const proxima = filas.find((f) => f.estado !== 'Pagado');
+  const totalPagar = redondear(filas.reduce((s, f) => s + f.cuota, 0));
+  const totalIntereses = redondear(filas.reduce((s, f) => s + f.interes, 0));
+  const capitalPagado = redondear(pagadas.reduce((s, f) => s + f.capital, 0));
+  return {
+    filas, pagadas: pagadas.length, vencidas: vencidas.length, proxima,
+    cuotaFija: filas[0] ? filas[0].cuota : 0,
+    totalPagar, totalIntereses,
+    pagado: redondear(pagadas.reduce((s, f) => s + f.cuota, 0)),
+    saldoCapital: redondear(prestamo.monto - capitalPagado),
+    estado: pagadas.length === filas.length ? 'Cancelado' : vencidas.length ? 'Con cuota vencida' : 'Al día',
+  };
+}
+
+function cambiarPestana(nombre) {
+  vista.pestana = nombre;
+  $('#vista-pagos').hidden = nombre !== 'pagos';
+  $('#vista-prestamos').hidden = nombre !== 'prestamos';
+  document.querySelectorAll('.pestana').forEach((b) => b.classList.toggle('activa', b.dataset.vista === nombre));
+  render();
+}
+
+function renderPrestamos() {
+  const prestamos = leerPrestamos();
+  const pagos = leerPagos();
+  const detalles = prestamos.map((p) => ({ prestamo: p, d: detallePrestamo(p, pagos) }));
+  const activos = detalles.filter((x) => x.d.estado !== 'Cancelado');
+  const mesActual = hoyISO().slice(0, 7);
+  const cuotasMes = detalles.flatMap((x) => x.d.filas).filter((f) => f.vencimiento.startsWith(mesActual));
+  const proximas = activos.map((x) => ({ ...x.d.proxima, entidad: x.prestamo.entidad })).filter((f) => f.n)
+    .sort((a, b) => a.vencimiento.localeCompare(b.vencimiento));
+
+  $('#prestamos-kpis').innerHTML = [
+    ['total', 'Deuda pendiente (capital)', soles(activos.reduce((s, x) => s + x.d.saldoCapital, 0)), `${activos.length} ${activos.length === 1 ? 'préstamo activo' : 'préstamos activos'}`],
+    ['pendiente', 'Cuotas de este mes', soles(cuotasMes.reduce((s, f) => s + f.cuota, 0)), `${cuotasMes.length} ${cuotasMes.length === 1 ? 'cuota' : 'cuotas'} · ${cuotasMes.filter((f) => f.estado === 'Pagado').length} pagadas`],
+    ['pagado', 'Total pagado en préstamos', soles(detalles.reduce((s, x) => s + x.d.pagado, 0)), `${detalles.reduce((s, x) => s + x.d.pagadas, 0)} cuotas pagadas`],
+    ['vencido', 'Próxima cuota', proximas[0] ? soles(proximas[0].cuota) : '—', proximas[0] ? `${proximas[0].entidad} · ${fechaCorta(proximas[0].vencimiento)}` : 'Sin cuotas pendientes'],
+  ].map(([clase, titulo, valor, pie]) => `
+      <div class="kpi ${clase} kpi-fijo"><span>${titulo}</span><strong>${valor}</strong><small>${seguro(pie)}</small></div>`).join('');
+
+  const esAsistente = usuarioActual() && usuarioActual().rol === 'asistente';
+  $('#prestamos-vacio').hidden = prestamos.length > 0;
+  $('#lista-prestamos').innerHTML = detalles
+    .sort((a, b) => a.prestamo.primeraCuota.localeCompare(b.prestamo.primeraCuota))
+    .map(({ prestamo: p, d }) => {
+      const avance = Math.round((d.pagadas / p.cuotas) * 100);
+      const claseEstado = d.estado === 'Con cuota vencida' ? 'vencido' : 'pagado';
+      const dato = (etiqueta, valor, destacado = '') => `<div class="dato ${destacado}"><span>${etiqueta}</span><b>${valor}</b></div>`;
+      return `
+      <article class="prestamo tarjeta">
+        <div class="prestamo-cab">
+          <span class="benef" data-inicial="${seguro(p.entidad.charAt(0).toUpperCase())}">${seguro(p.entidad)}</span>
+          <span class="estado ${claseEstado}">${d.estado}</span>
+        </div>
+        <p class="prestamo-desc">${seguro(p.descripcion)}${p.operacion ? ` · Op. N° ${seguro(p.operacion)}` : ''}</p>
+        <div class="prestamo-datos">
+          ${dato('Monto prestado', soles(p.monto), 'grande')}
+          ${dato('Cuota mensual', soles(d.cuotaFija), 'grande')}
+          ${dato('Saldo pendiente', soles(d.saldoCapital), 'grande')}
+          ${dato('Tasa (TEA)', `${p.tea}% · TEM ${(tasaMensual(p.tea) * 100).toFixed(3)}%`)}
+          ${dato('Plazo', `${p.cuotas} cuotas mensuales`)}
+          ${dato('Desembolso', fechaCorta(p.desembolso))}
+          ${dato('Primera cuota', fechaCorta(p.primeraCuota))}
+          ${dato('Última cuota', fechaCorta(d.filas[d.filas.length - 1].vencimiento))}
+          ${dato('Día de pago', `${Number(p.primeraCuota.slice(8))} de cada mes`)}
+          ${dato('Total intereses', soles(d.totalIntereses))}
+          ${dato('Total a pagar', soles(d.totalPagar))}
+          ${dato('Próxima cuota', d.proxima ? `N° ${d.proxima.n} · ${fechaCorta(d.proxima.vencimiento)}` : 'Cancelado')}
+        </div>
+        <div class="progreso"><div style="width:${avance}%"></div></div>
+        <p class="progreso-texto"><b>${d.pagadas} de ${p.cuotas}</b> cuotas pagadas (${avance}%) · ${soles(d.pagado)} pagado${d.vencidas ? ` · <span class="dias vencido">${d.vencidas} vencida${d.vencidas > 1 ? 's' : ''}</span>` : ''}</p>
+        <div class="prestamo-acciones">
+          <button class="btn chico con-icono suave" data-cronograma="${p.id}" data-accion="ver">Ver cronograma</button>
+          ${esAsistente ? `<button class="btn chico con-icono enlace rojo" data-eliminar-prestamo="${p.id}" data-accion="eliminar">Eliminar préstamo</button>` : ''}
+        </div>
+      </article>`;
+    }).join('');
+}
+
+function verCronograma(id) {
+  const prestamo = leerPrestamos().find((p) => p.id === id);
+  if (!prestamo) return;
+  const d = detallePrestamo(prestamo);
+  $('#cronograma-titulo').textContent = `Cronograma — ${prestamo.entidad}`;
+  $('#cronograma-detalle').textContent =
+    `${prestamo.descripcion} · ${soles(prestamo.monto)} al ${prestamo.tea}% TEA en ${prestamo.cuotas} cuotas`;
+  $('#cronograma-tabla tbody').innerHTML = d.filas.map((f) => `
+      <tr>
+        <td>${f.n}</td>
+        <td>${fechaCorta(f.vencimiento)}</td>
+        <td class="num">${soles(f.cuota)}</td>
+        <td class="num">${soles(f.interes)}</td>
+        <td class="num">${soles(f.capital)}</td>
+        <td class="num">${soles(f.saldo)}</td>
+        <td><span class="estado ${f.estado.toLowerCase()}">${f.estado}</span></td>
+      </tr>`).join('');
+  $('#cronograma-tabla tfoot').innerHTML = `
+      <tr><td colspan="2">Totales</td><td class="num">${soles(d.totalPagar)}</td><td class="num">${soles(d.totalIntereses)}</td>
+      <td class="num">${soles(prestamo.monto)}</td><td></td><td></td></tr>`;
+  $('#dlg-cronograma').showModal();
+}
+
+function abrirFormularioPrestamo() {
+  const form = $('#form-prestamo');
+  form.reset();
+  mostrarErrores(form, {});
+  form.elements.desembolso.value = hoyISO();
+  form.elements.primeraCuota.value = sumarMeses(hoyISO(), 1);
+  vistaPreviaPrestamo();
+  $('#dlg-prestamo').showModal();
+  form.elements.entidad.focus();
+}
+
+function datosPrestamo(form) {
+  const c = form.elements;
+  const datos = {
+    entidad: c.entidad.value.trim(),
+    descripcion: c.descripcion.value.trim(),
+    operacion: c.operacion.value.trim(),
+    monto: normalizarMonto(c.monto.value),
+    tea: c.tea.value.trim().replace(',', '.'),
+    cuotas: c.cuotas.value.trim(),
+    desembolso: c.desembolso.value,
+    primeraCuota: c.primeraCuota.value,
+  };
+  const errores = {};
+  if (!datos.entidad) errores.entidad = 'Indica el banco o la entidad.';
+  if (!datos.descripcion) errores.descripcion = 'Indica para qué es el préstamo.';
+  if (!/^\d+(\.\d{1,2})?$/.test(datos.monto) || Number(datos.monto) <= 0) errores.monto = 'Monto mayor que 0, máximo 2 decimales.';
+  if (!/^\d+(\.\d{1,2})?$/.test(datos.tea) || Number(datos.tea) > 200) errores.tea = 'TEA entre 0 y 200 (ej. 18.5).';
+  if (!/^\d+$/.test(datos.cuotas) || Number(datos.cuotas) < 1 || Number(datos.cuotas) > 120) errores.cuotas = 'Entre 1 y 120 cuotas.';
+  if (!datos.desembolso) errores.desembolso = 'Elige la fecha de desembolso.';
+  if (!datos.primeraCuota) errores.primeraCuota = 'Elige la fecha de la primera cuota.';
+  else if (datos.desembolso && datos.primeraCuota <= datos.desembolso) errores.primeraCuota = 'Debe ser después del desembolso.';
+  datos.monto = Number(datos.monto);
+  datos.tea = Number(datos.tea);
+  datos.cuotas = Number(datos.cuotas);
+  return { datos, errores };
+}
+
+function vistaPreviaPrestamo() {
+  const { datos, errores } = datosPrestamo($('#form-prestamo'));
+  const caja = $('#prestamo-previa');
+  if (errores.monto || errores.tea || errores.cuotas || errores.primeraCuota || !datos.primeraCuota) {
+    caja.innerHTML = 'Completa monto, TEA, cuotas y fechas para ver el cálculo.';
+    return;
+  }
+  const filas = cronograma({ ...datos });
+  const total = redondear(filas.reduce((s, f) => s + f.cuota, 0));
+  caja.innerHTML = `Cuota mensual: <b>${soles(filas[0].cuota)}</b> · Total a pagar: <b>${soles(total)}</b>
+    · Intereses: <b>${soles(redondear(total - datos.monto))}</b> · Última cuota: <b>${fechaCorta(filas[filas.length - 1].vencimiento)}</b>`;
+}
+
+function guardarPrestamo(evento) {
+  evento.preventDefault();
+  const form = evento.target;
+  const { datos, errores } = datosPrestamo(form);
+  mostrarErrores(form, errores);
+  if (Object.keys(errores).length) return;
+
+  const prestamo = { id: nuevoId(), esPrestamo: true, ...datos, creado: hoyISO() };
+  const cuotas = cuotasDePrestamo(prestamo);
+  if (!guardarRegistros([...leerPagos(), ...cuotas, ...leerPrestamos(), prestamo])) return;
+  $('#dlg-prestamo').close();
+  render();
+  aviso(`Préstamo registrado: se crearon ${cuotas.length} cuotas en los pagos`);
+}
+
+async function eliminarPrestamo(id) {
+  const prestamo = leerPrestamos().find((p) => p.id === id);
+  if (!prestamo) return;
+  const pendientes = leerPagos().filter((p) => p.prestamoId === id && !p.pagado);
+  const ok = await confirmar(
+    '¿Eliminar este préstamo?',
+    `${prestamo.entidad} · ${prestamo.descripcion}. Se borrarán sus ${pendientes.length} cuotas pendientes; las cuotas ya pagadas se quedan en el historial.`,
+    'Sí, eliminar',
+  );
+  if (!ok) return;
+  const pagos = leerPagos().filter((p) => !(p.prestamoId === id && !p.pagado));
+  guardarRegistros([...pagos, ...leerPrestamos().filter((p) => p.id !== id)]);
+  render();
+  aviso('Préstamo eliminado');
+}
+
+document.querySelectorAll('.pestana').forEach((b) => b.addEventListener('click', () => cambiarPestana(b.dataset.vista)));
+$('#btn-nuevo-prestamo').addEventListener('click', abrirFormularioPrestamo);
+$('#form-prestamo').addEventListener('submit', guardarPrestamo);
+$('#form-prestamo').addEventListener('input', vistaPreviaPrestamo);
+$('#lista-prestamos').addEventListener('click', (evento) => {
+  const verBtn = evento.target.closest('[data-cronograma]');
+  const borrarBtn = evento.target.closest('[data-eliminar-prestamo]');
+  if (verBtn) verCronograma(verBtn.dataset.cronograma);
+  if (borrarBtn) eliminarPrestamo(borrarBtn.dataset.eliminarPrestamo);
 });
 
 // ================== ARRANQUE ==================
